@@ -11,4 +11,19 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-module.exports = pool.promise();
+const promisePool = pool.promise();
+
+const testConnection = async () => {
+  const connection = await promisePool.getConnection();
+
+  try {
+    await connection.query("SELECT 1");
+    console.log("Database connected successfully.");
+  } finally {
+    connection.release();
+  }
+};
+
+promisePool.testConnection = testConnection;
+
+module.exports = promisePool;
