@@ -61,7 +61,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
         </section>
 
         <div className="dashboard-grid">
-          <section className="dashboard-panel">
+          <section className="dashboard-panel eligibility-panel">
             <div className="panel-heading">
               <div>
                 <p className="panel-eyebrow">Stay ready</p>
