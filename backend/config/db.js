@@ -46,7 +46,29 @@ const ensureProfileColumns = async () => {
   }
 };
 
+const ensureDonorDetailsTable = async () => {
+  await promisePool.query(`
+    CREATE TABLE IF NOT EXISTS donor_details (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL UNIQUE,
+      blood_group VARCHAR(5) NOT NULL,
+      phone VARCHAR(30) NOT NULL,
+      nic VARCHAR(20) NOT NULL,
+      age TINYINT UNSIGNED NOT NULL,
+      gender VARCHAR(20) NOT NULL,
+      city VARCHAR(100) NOT NULL,
+      last_donated_date DATE NULL,
+      is_eligible BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT fk_donor_details_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+};
+
 promisePool.testConnection = testConnection;
 promisePool.ensureProfileColumns = ensureProfileColumns;
+promisePool.ensureDonorDetailsTable = ensureDonorDetailsTable;
 
 module.exports = promisePool;

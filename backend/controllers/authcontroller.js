@@ -42,9 +42,19 @@ exports.login = async (req, res) => {
 
   try {
     // User ඉන්නවාදැයි පරීක්ෂා කිරීම
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
+    const [users] = await db.query(
+      `SELECT users.*, donor_details.blood_group AS donor_blood_group,
+              donor_details.phone AS donor_phone, donor_details.nic,
+              donor_details.age, donor_details.gender, donor_details.city,
+              donor_details.last_donated_date, donor_details.is_eligible,
+              donor_details.id AS donor_details_id
+       FROM users
+       LEFT JOIN donor_details ON donor_details.user_id = users.id
+       WHERE users.email = ?`,
+      [
       email,
-    ]);
+      ],
+    );
     if (users.length === 0) {
       return res.status(400).json({ message: "Invalid Email or Password!" });
     }
@@ -76,10 +86,67 @@ exports.login = async (req, res) => {
         bloodGroup: user.blood_group || "",
         location: user.location || "",
         profilePicture: user.profile_picture || "",
+        donorDetails: user.donor_details_id ? {
+          bloodGroup: user.donor_blood_group,
+          phone: user.donor_phone,
+          nic: user.nic,
+          age: user.age,
+          gender: user.gender,
+          city: user.city,
+          lastDonatedDate: user.last_donated_date || "",
+          isEligible: Boolean(user.is_eligible),
+        } : null,
+        donorDetailsComplete: Boolean(user.donor_details_id),
       },
     });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+exports.updateDonorDetails = async (req, res) => {
+  const {
+    bloodGroup, phone, nic, age, gender, city, lastDonatedDate,
+  } = req.body;
+  const numericAge = Number(age);
+
+  if (!bloodGroup || !phone?.trim() || !nic?.trim() || !gender || !city?.trim()
+    || !Number.isInteger(numericAge) || numericAge < 18 || numericAge > 100) {
+    return res.status(400).json({ message: "Please provide valid donor details. Donors must be between 18 and 100 years old." });
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO donor_details
+        (user_id, blood_group, phone, nic, age, gender, city, last_donated_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+        blood_group = VALUES(blood_group), phone = VALUES(phone), nic = VALUES(nic),
+        age = VALUES(age), gender = VALUES(gender), city = VALUES(city),
+        last_donated_date = VALUES(last_donated_date)`,
+      [
+        req.user.id,
+        bloodGroup,
+        phone.trim(),
+        nic.trim(),
+        numericAge,
+        gender,
+        city.trim(),
+        lastDonatedDate || null,
+      ],
+    );
+
+    return res.status(200).json({
+      message: "Donor details updated successfully.",
+      donorDetails: {
+        bloodGroup, phone: phone.trim(), nic: nic.trim(), age: numericAge,
+        gender, city: city.trim(), lastDonatedDate: lastDonatedDate || "",
+        isEligible: true,
+      },
+      donorDetailsComplete: true,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to save donor details.", error: error.message });
   }
 };
 
@@ -137,5 +204,26 @@ exports.updateProfile = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: "Unable to update profile.", error: error.message });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword || newPassword.length < 8) {
+    return res.status(400).json({ message: "Current password and a new password of at least 8 characters are required." });
+  }
+
+  try {
+    const [users] = await db.query("SELECT password FROM users WHERE id = ?", [req.user.id]);
+    if (users.length === 0 || !(await bcrypt.compare(currentPassword, users[0].password))) {
+      return res.status(400).json({ message: "Current password is incorrect." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, req.user.id]);
+    return res.status(200).json({ message: "Password changed successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to change password.", error: error.message });
   }
 };

@@ -25,6 +25,7 @@ const startServer = async () => {
   try {
     await db.testConnection();
     await db.ensureProfileColumns();
+    await db.ensureDonorDetailsTable();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
