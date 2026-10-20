@@ -7,12 +7,20 @@
 }
 
 .camps-content {
+  position: relative;
   min-width: 0;
   width: 100%;
   height: 100vh;
   overflow-y: auto;
-  padding: 38px 52px;
+  padding: 24px 52px 38px;
   box-sizing: border-box;
+}
+
+.camps-back-row {
+  display: flex;
+  justify-content: flex-start;
+  max-width: 1400px;
+  margin: 0 auto 22px;
 }
 
 .camps-header {
@@ -34,14 +42,22 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0;
+  padding: 8px 12px 8px 9px;
   color: #b91c1c;
-  border: 0;
-  background: transparent;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff;
   font: inherit;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 5px 14px rgba(185, 28, 28, 0.08);
+}
+
+.back-button:hover {
+  color: #991b1b;
+  border-color: #fca5a5;
+  background: #fff7f7;
 }
 
 .back-button .dashboard-icon {
@@ -229,7 +245,7 @@
 }
 
 @media (max-width: 1050px) {
-  .camps-content { padding: 32px 28px; }
+  .camps-content { padding: 24px 28px 32px; }
   .camps-layout { grid-template-columns: 1fr; }
   .map-frame { height: 400px; }
 }
@@ -251,7 +267,7 @@
 }
 
 @media (max-width: 600px) {
-  .camps-content { padding: 24px 16px; }
+  .camps-content { padding: 18px 16px 24px; }
   .camps-header h1 { font-size: 27px; }
   .map-panel,
   .camp-list-panel { padding: 18px; }

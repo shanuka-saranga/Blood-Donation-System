@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import "./DonationCamps.css";
+import PageTopbar from "../components/PageTopbar";
 
 const camps = [
   {
@@ -36,7 +37,7 @@ const camps = [
   },
 ];
 
-function DonationCamps({ user, onBack, onLogout }) {
+function DonationCamps({ user, onBack, onOpenProfile, onLogout }) {
   const [search, setSearch] = useState("");
   const [selectedCamp, setSelectedCamp] = useState(camps[0]);
   const firstName = user.name?.split(" ")[0] || "Donor";
@@ -78,7 +79,7 @@ function DonationCamps({ user, onBack, onLogout }) {
           <button className="dashboard-nav-item" type="button">
             <HistoryIcon /> My donations
           </button>
-          <button className="dashboard-nav-item" type="button">
+          <button className="dashboard-nav-item" onClick={onOpenProfile} type="button">
             <ProfileIcon /> My profile
           </button>
         </nav>
@@ -89,21 +90,17 @@ function DonationCamps({ user, onBack, onLogout }) {
       </aside>
 
       <section className="camps-content">
+        <PageTopbar onOpenProfile={onOpenProfile} user={user} />
+        <div className="camps-back-row">
+          <button className="back-button" onClick={onBack} type="button">
+            <ArrowBackIcon /> Back to overview
+          </button>
+        </div>
         <header className="camps-header">
           <div>
-            <button className="back-button" onClick={onBack} type="button">
-              <ArrowBackIcon /> Back to overview
-            </button>
             <p className="dashboard-eyebrow">Donation camps</p>
             <h1>Find a camp near you, {firstName}.</h1>
             <p className="dashboard-subtitle">Choose a convenient location and make your next life-saving donation.</p>
-          </div>
-          <div className="dashboard-user">
-            <div className="dashboard-avatar">{firstName.charAt(0).toUpperCase()}</div>
-            <div>
-              <strong>{user.name}</strong>
-              <span>Blood donor</span>
-            </div>
           </div>
         </header>
 
