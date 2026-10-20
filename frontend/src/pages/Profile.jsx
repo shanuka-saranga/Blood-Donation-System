@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import "./Profile.css";
+import "./DonorDetailsModal.css";
 import PageTopbar from "../components/PageTopbar";
 
 const API_URL = "http://localhost:5000/api/auth";
@@ -14,13 +15,38 @@ function Profile({ user, onUserUpdate, onBack, onLogout, darkMode, onToggleDarkM
     location: user.location || "",
   });
   const [profilePicture, setProfilePicture] = useState(user.profilePicture || "");
+  const [donorDetails, setDonorDetails] = useState({
+    bloodGroup: user.donorDetails?.bloodGroup || user.bloodGroup || "",
+    phone: user.donorDetails?.phone || user.phone || "",
+    nic: user.donorDetails?.nic || "",
+    age: user.donorDetails?.age || "",
+    gender: user.donorDetails?.gender || "",
+    city: user.donorDetails?.city || user.location || "",
+    lastDonatedDate: user.donorDetails?.lastDonatedDate || "",
+  });
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [notifications, setNotifications] = useState(() => localStorage.getItem("notifications") !== "false");
   const [message, setMessage] = useState("");
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+    setIsDirty(true);
+    if (name === "phone" || name === "bloodGroup") {
+      setDonorDetails((current) => ({ ...current, [name]: value }));
+    }
+    setMessage("");
+  };
+
+  const handleDonorDetailChange = (event) => {
+    const { name, value } = event.target;
+    setDonorDetails((current) => ({ ...current, [name]: value }));
+    setIsDirty(true);
     setMessage("");
   };
 
@@ -38,7 +64,10 @@ function Profile({ user, onUserUpdate, onBack, onLogout, darkMode, onToggleDarkM
     }
 
     const reader = new FileReader();
-    reader.onload = () => setProfilePicture(reader.result);
+    reader.onload = () => {
+      setProfilePicture(reader.result);
+      setIsDirty(true);
+    };
     reader.onerror = () => setMessage("Unable to read the selected picture.");
     reader.readAsDataURL(file);
     setMessage("");
@@ -56,9 +85,21 @@ function Profile({ user, onUserUpdate, onBack, onLogout, darkMode, onToggleDarkM
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
       );
       const updatedUser = response.data.user;
+      if (user.role === "donor") {
+        const donorResponse = await axios.put(
+          `${API_URL}/donor-details`,
+          donorDetails,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
+        );
+        updatedUser.donorDetails = donorResponse.data.donorDetails;
+        updatedUser.donorDetailsComplete = donorResponse.data.donorDetailsComplete;
+      }
       localStorage.setItem("user", JSON.stringify(updatedUser));
       onUserUpdate(updatedUser);
       setMessage(response.data.message);
+      setIsDirty(false);
+      setShowSuccess(true);
+      window.setTimeout(() => setShowSuccess(false), 2400);
     } catch (error) {
       setMessage(error.response?.data?.message || "Unable to save your profile. Please try again.");
     } finally {
@@ -70,6 +111,41 @@ function Profile({ user, onUserUpdate, onBack, onLogout, darkMode, onToggleDarkM
     const enabled = event.target.checked;
     setNotifications(enabled);
     localStorage.setItem("notifications", String(enabled));
+  };
+
+  const handlePasswordChange = (event) => {
+    const { name, value } = event.target;
+    setPasswordForm((current) => ({ ...current, [name]: value }));
+    setPasswordMessage("");
+  };
+
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage("New passwords do not match.");
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordMessage("New password must be at least 8 characters.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setPasswordMessage("");
+    try {
+      const response = await axios.put(`${API_URL}/change-password`, {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordMessage(response.data.message);
+    } catch (error) {
+      setPasswordMessage(error.response?.data?.message || "Unable to change password. Please try again.");
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -124,10 +200,15 @@ function Profile({ user, onUserUpdate, onBack, onLogout, darkMode, onToggleDarkM
               <label>Phone number<input className="profile-input" name="phone" onChange={handleChange} placeholder="Enter your phone number" value={form.phone} /></label>
               <label>Blood group<select className="profile-select" name="bloodGroup" onChange={handleChange} value={form.bloodGroup}><option value="">Select blood group</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></label>
               <label className="profile-field-wide">Preferred location<input className="profile-input" name="location" onChange={handleChange} placeholder="e.g. Galle, Matara" value={form.location} /></label>
+              <label>NIC<input className="profile-input" name="nic" onChange={handleDonorDetailChange} required value={donorDetails.nic} /></label>
+              <label>Age<input className="profile-input" min="18" max="100" name="age" onChange={handleDonorDetailChange} required type="number" value={donorDetails.age} /></label>
+              <label>Gender<select className="profile-select" name="gender" onChange={handleDonorDetailChange} required value={donorDetails.gender}><option value="">Select gender</option><option>Male</option><option>Female</option><option>Other</option></select></label>
+              <label>City<input className="profile-input" name="city" onChange={handleDonorDetailChange} required value={donorDetails.city} /></label>
+              <label className="profile-field-wide">Last donated date<input className="profile-input" name="lastDonatedDate" onChange={handleDonorDetailChange} type="date" value={donorDetails.lastDonatedDate} /></label>
             </div>
             <div className="profile-form-footer">
               {message && <span className="profile-success">{message}</span>}
-              <button className="profile-save-button" disabled={isSaving} type="submit">{isSaving ? "Saving..." : "Save changes"}</button>
+              {isDirty && <button className="profile-save-button" disabled={isSaving} type="submit">{isSaving ? "Saving..." : "Save changes"}</button>}
             </div>
           </form>
 
@@ -137,8 +218,31 @@ function Profile({ user, onUserUpdate, onBack, onLogout, darkMode, onToggleDarkM
             <Preference title="Camp reminders" description="Get reminders about nearby donation camps." checked={notifications} onChange={handleNotifications} />
             <div className="profile-tip"><HeartIcon /><div><strong>Every donation matters</strong><p>Your updated location helps us show the most convenient camps for you.</p></div></div>
           </section>
+
+          <form className="profile-card password-card" onSubmit={handlePasswordSubmit}>
+            <div className="profile-card-heading">
+              <div><p className="panel-eyebrow">Security</p><h2>Change password</h2></div>
+            </div>
+            <div className="password-fields">
+              <label>Current password<input className="profile-input" name="currentPassword" onChange={handlePasswordChange} required type="password" value={passwordForm.currentPassword} /></label>
+              <label>New password<input className="profile-input" minLength="8" name="newPassword" onChange={handlePasswordChange} required type="password" value={passwordForm.newPassword} /></label>
+              <label>Confirm new password<input className="profile-input" minLength="8" name="confirmPassword" onChange={handlePasswordChange} required type="password" value={passwordForm.confirmPassword} /></label>
+            </div>
+            {passwordMessage && <p className={`password-message ${passwordMessage.includes("successfully") ? "password-message-success" : ""}`}>{passwordMessage}</p>}
+            <button className="profile-save-button" disabled={isChangingPassword} type="submit">{isChangingPassword ? "Updating..." : "Update password"}</button>
+          </form>
         </div>
       </section>
+      {showSuccess && (
+        <div className="donor-details-overlay">
+          <section aria-live="polite" className="donor-details-modal donor-details-success-modal">
+            <div className="donor-details-success-icon">✓</div>
+            <p className="dashboard-eyebrow">Profile updated</p>
+            <h2>Thank you, your changes were saved!</h2>
+            <p className="donor-details-description">Your profile details have been updated successfully.</p>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

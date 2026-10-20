@@ -71,7 +71,13 @@
 .profile-tip { display: flex; gap: 11px; margin-top: 18px; padding: 14px; color: #b91c1c; border-radius: 10px; background: #fff1f2; }
 .profile-tip p { margin: 4px 0 0; color: #64748b; font-size: 11px; line-height: 1.5; }
 .profile-tip strong { font-size: 12px; }
+.password-card { grid-column: 1 / -1; }
+.password-fields { display: grid; gap: 18px; grid-template-columns: repeat(3, 1fr); }
+.password-fields label { display: grid; gap: 7px; color: #475569; font-size: 12px; font-weight: 700; }
+.password-message { margin: 16px 0 0; color: #b91c1c; font-size: 12px; }
+.password-message-success { color: #047857; }
+.password-card .profile-save-button { margin-top: 20px; }
 
 @media (max-width: 1050px) { .profile-content { padding: 28px; } .profile-layout { grid-template-columns: 1fr; } }
 @media (max-width: 800px) { .profile-page { display: block; height: auto; overflow: visible; } .profile-content { height: auto; overflow: visible; } .profile-header { align-items: flex-start; flex-direction: column; } }
-@media (max-width: 600px) { .profile-content { padding: 22px 16px; } .profile-header h1 { font-size: 28px; } .profile-card { padding: 20px; } .profile-fields { grid-template-columns: 1fr; } .profile-field-wide, .profile-picture-field { grid-column: auto; } .profile-form-footer { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 600px) { .profile-content { padding: 22px 16px; } .profile-header h1 { font-size: 28px; } .profile-card { padding: 20px; } .profile-fields, .password-fields { grid-template-columns: 1fr; } .profile-field-wide, .profile-picture-field, .password-card { grid-column: auto; } .profile-form-footer { align-items: flex-start; flex-direction: column; } }
