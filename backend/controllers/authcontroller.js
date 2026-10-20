@@ -72,9 +72,70 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone || "",
+        bloodGroup: user.blood_group || "",
+        location: user.location || "",
+        profilePicture: user.profile_picture || "",
       },
     });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  const { name, email, phone, bloodGroup, location, profilePicture } = req.body;
+
+  if (!name?.trim() || !email?.trim()) {
+    return res.status(400).json({ message: "Name and email are required." });
+  }
+
+  if (profilePicture && !/^data:image\/(jpeg|png|webp|gif);base64,/.test(profilePicture)) {
+    return res.status(400).json({ message: "Profile picture must be a supported image." });
+  }
+
+  if (profilePicture && profilePicture.length > 2.5 * 1024 * 1024) {
+    return res.status(413).json({ message: "Profile picture must be smaller than 2 MB." });
+  }
+
+  try {
+    const [existingUser] = await db.query(
+      "SELECT id FROM users WHERE email = ? AND id <> ?",
+      [email.trim(), req.user.id],
+    );
+    if (existingUser.length > 0) {
+      return res.status(400).json({ message: "Email already registered!" });
+    }
+
+    await db.query(
+      `UPDATE users
+       SET name = ?, email = ?, phone = ?, blood_group = ?, location = ?, profile_picture = ?
+       WHERE id = ?`,
+      [
+        name.trim(),
+        email.trim(),
+        phone?.trim() || null,
+        bloodGroup || null,
+        location?.trim() || null,
+        profilePicture || null,
+        req.user.id,
+      ],
+    );
+
+    return res.status(200).json({
+      message: "Profile updated successfully.",
+      user: {
+        id: req.user.id,
+        name: name.trim(),
+        email: email.trim(),
+        role: req.user.role,
+        phone: phone?.trim() || "",
+        bloodGroup: bloodGroup || "",
+        location: location?.trim() || "",
+        profilePicture: profilePicture || "",
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to update profile.", error: error.message });
   }
 };

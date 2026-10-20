@@ -12,3 +12,120 @@ body {
   font-family: poppins, sans-serif;
 
 }
+
+.page-topbar {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  min-height: 38px;
+  margin-bottom: 24px;
+  padding: 8px 10px;
+  border: 1px solid #fee2e2;
+  border-radius: 12px;
+  background: #fff;
+  box-sizing: border-box;
+  box-shadow: 0 5px 16px rgba(185, 28, 28, 0.06);
+}
+
+.page-profile-button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #fecaca;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.1);
+}
+
+.page-profile-button:hover,
+.page-profile-button:focus-visible {
+  border-color: #dc2626;
+  outline: 0;
+  box-shadow: 0 0 0 3px #fee2e2;
+}
+
+.page-profile-button .dashboard-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+
+.page-user-role {
+  margin-left: 9px;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  align-self: center;
+}
+
+html[data-theme="dark"] body {
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .dashboard-page,
+html[data-theme="dark"] .camps-page,
+html[data-theme="dark"] .profile-page {
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .dashboard-header h1,
+html[data-theme="dark"] .camps-header h1,
+html[data-theme="dark"] .profile-header h1,
+html[data-theme="dark"] .panel-heading h2,
+html[data-theme="dark"] .map-heading h2,
+html[data-theme="dark"] .profile-card h2,
+html[data-theme="dark"] .profile-card strong,
+html[data-theme="dark"] .stat-card strong {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .dashboard-subtitle,
+html[data-theme="dark"] .dashboard-user span,
+html[data-theme="dark"] .profile-card small,
+html[data-theme="dark"] .profile-card label,
+html[data-theme="dark"] .profile-description {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .dashboard-panel,
+html[data-theme="dark"] .map-panel,
+html[data-theme="dark"] .camp-list-panel,
+html[data-theme="dark"] .profile-card,
+html[data-theme="dark"] .camp-search {
+  border-color: #334155;
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .camp-search input,
+html[data-theme="dark"] .profile-input,
+html[data-theme="dark"] .profile-select {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .profile-input,
+html[data-theme="dark"] .profile-select {
+  border-color: #475569;
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .page-profile-button {
+  border-color: #475569;
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .page-topbar {
+  border-color: #334155;
+  background: #1e293b;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16);
+}
+
+html[data-theme="dark"] .page-user-role {
+  color: #fca5a5;
+}

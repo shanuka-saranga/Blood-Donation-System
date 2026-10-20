@@ -24,6 +24,29 @@ const testConnection = async () => {
   }
 };
 
+const ensureProfileColumns = async () => {
+  const columns = [
+    ["phone", "VARCHAR(30) NULL"],
+    ["blood_group", "VARCHAR(5) NULL"],
+    ["location", "VARCHAR(120) NULL"],
+    ["profile_picture", "MEDIUMTEXT NULL"],
+  ];
+
+  for (const [name, definition] of columns) {
+    const [existingColumns] = await promisePool.query(
+      `SELECT COUNT(*) AS count
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = ?`,
+      [name],
+    );
+
+    if (existingColumns[0].count === 0) {
+      await promisePool.query(`ALTER TABLE users ADD COLUMN ${name} ${definition}`);
+    }
+  }
+};
+
 promisePool.testConnection = testConnection;
+promisePool.ensureProfileColumns = ensureProfileColumns;
 
 module.exports = promisePool;
