@@ -1,6 +1,6 @@
 import "./DonorDashboard.css";
 
-function DonorDashboard({ user, onLogout }) {
+function DonorDashboard({ user, onLogout, onOpenCamps }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
 
   return (
@@ -15,7 +15,7 @@ function DonorDashboard({ user, onLogout }) {
           <button className="dashboard-nav-item dashboard-nav-item-active" type="button">
             <DashboardIcon /> Overview
           </button>
-          <button className="dashboard-nav-item" type="button">
+          <button className="dashboard-nav-item" onClick={onOpenCamps} type="button">
             <CalendarIcon /> Donation camps
           </button>
           <button className="dashboard-nav-item" type="button">
@@ -52,7 +52,7 @@ function DonorDashboard({ user, onLogout }) {
             <span className="hero-card-label">Your next opportunity</span>
             <h2>Be someone's reason to live.</h2>
             <p>Find a nearby blood donation camp and make your next life-saving donation.</p>
-            <button className="primary-dashboard-button" type="button">
+            <button className="primary-dashboard-button" onClick={onOpenCamps} type="button">
               Find a donation camp <ArrowIcon />
             </button>
           </div>
