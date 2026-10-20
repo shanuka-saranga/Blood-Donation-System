@@ -1,8 +1,68 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import "./DonorDashboard.css";
 import PageTopbar from "../components/PageTopbar";
+import MatchingRequestsList from "../components/MatchingRequestsList";
 
-function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
+function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenProfile }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
+  const [eligibility, setEligibility] = useState(user.donorDetails ? {
+    isEligible: Boolean(user.donorDetails.isEligible),
+    lastDonatedDate: user.donorDetails.lastDonatedDate || "",
+  } : null);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [eligibilityError, setEligibilityError] = useState("");
+  const [showDonationForm, setShowDonationForm] = useState(false);
+  const [isSubmittingDonation, setIsSubmittingDonation] = useState(false);
+  const [donationError, setDonationError] = useState("");
+  const [donationSuccess, setDonationSuccess] = useState(false);
+
+  const handleCheckEligibility = async () => {
+    setIsCheckingEligibility(true);
+    setEligibilityError("");
+    try {
+      const response = await axios.get("http://localhost:5000/api/auth/eligibility", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setEligibility(response.data);
+    } catch (error) {
+      setEligibilityError(error.response?.data?.message || "Unable to check eligibility.");
+    } finally {
+      setIsCheckingEligibility(false);
+    }
+  };
+
+  const handleMarkDonation = async (donation) => {
+    setIsSubmittingDonation(true);
+    setDonationError("");
+    try {
+      const response = await axios.post("http://localhost:5000/api/auth/donations", donation, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setEligibility({
+        isEligible: response.data.isEligible,
+        lastDonatedDate: response.data.donation?.donatedDate || donation.donatedDate,
+        message: response.data.message,
+      });
+      setDonationSuccess(true);
+      setTimeout(() => {
+        setDonationSuccess(false);
+        setShowDonationForm(false);
+      }, 1800);
+    } catch (error) {
+      setDonationError(error.response?.data?.message || "Unable to record donation.");
+    } finally {
+      setIsSubmittingDonation(false);
+    }
+  };
+
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(() => {
+      handleCheckEligibility();
+    }, 0);
+
+    return () => window.clearTimeout(refreshTimer);
+  }, []);
 
   return (
     <main className="dashboard-page">
@@ -18,6 +78,9 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
           </button>
           <button className="dashboard-nav-item" onClick={onOpenCamps} type="button">
             <CalendarIcon /> Donation camps
+          </button>
+          <button className="dashboard-nav-item" onClick={onOpenBloodRequest} type="button">
+            <HeartIcon /> I want blood
           </button>
           <button className="dashboard-nav-item" type="button">
             <HistoryIcon /> My donations
@@ -47,17 +110,32 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
             <span className="hero-card-label">Your next opportunity</span>
             <h2>Be someone's reason to live.</h2>
             <p>Find a nearby blood donation camp and make your next life-saving donation.</p>
-            <button className="primary-dashboard-button" onClick={onOpenCamps} type="button">
+            <div className="hero-card-actions">
+              <button className="primary-dashboard-button" onClick={onOpenCamps} type="button">
               Find a donation camp <ArrowIcon />
-            </button>
+              </button>
+              <button className="secondary-dashboard-button" onClick={onOpenBloodRequest} type="button">
+                I want blood <HeartIcon />
+              </button>
+            </div>
           </div>
           <div className="hero-card-heart"><HeartIcon /></div>
         </section>
 
         <section className="dashboard-stats" aria-label="Donation statistics">
           <StatCard icon={<HeartIcon />} value="3" label="Total donations" tone="red" />
-          <StatCard icon={<CalendarIcon />} value="12 Jun" label="Last donation" tone="blue" />
-          <StatCard icon={<CheckIcon />} value="Eligible" label="Donation status" tone="green" />
+          <StatCard
+            icon={<CalendarIcon />}
+            value={formatDonationDate(eligibility?.lastDonatedDate)}
+            label="Last donation"
+            tone="blue"
+          />
+          <StatCard
+            icon={eligibility?.isEligible ? <CheckIcon /> : <ClockIcon />}
+            value={eligibility ? (eligibility.isEligible ? "Eligible" : "Not eligible") : "Checking..."}
+            label="Donation status"
+            tone={eligibility?.isEligible ? "green" : "orange"}
+          />
         </section>
 
         <div className="dashboard-grid">
@@ -67,17 +145,43 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
                 <p className="panel-eyebrow">Stay ready</p>
                 <h2>Donation eligibility</h2>
               </div>
-              <span className="status-pill">Eligible now</span>
+              <span className={`status-pill ${eligibility && !eligibility.isEligible ? "status-pill-not-eligible" : ""}`}>
+                {eligibility ? (eligibility.isEligible ? "Eligible now" : "Not eligible yet") : "Not checked"}
+              </span>
             </div>
             <div className="eligibility-row">
-              <div className="eligibility-icon"><CheckIcon /></div>
+              <div className={`eligibility-icon ${eligibility && !eligibility.isEligible ? "eligibility-icon-not-eligible" : ""}`}>
+                {eligibility && !eligibility.isEligible ? <ClockIcon /> : <CheckIcon />}
+              </div>
               <div>
-                <strong>You can donate blood</strong>
-                <p>Your last donation was more than 3 months ago.</p>
+                <strong>
+                  {eligibility
+                    ? (eligibility.isEligible ? "You can donate blood" : "Please wait before donating")
+                    : "Check your donation eligibility"}
+                </strong>
+                <p>
+                  {eligibility
+                    ? (eligibility.isEligible
+                      ? (eligibility.lastDonatedDate
+                        ? `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. You can donate again.`
+                        : "No previous donation is recorded. You can donate blood.")
+                      : `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. At least 3 months should pass between donations.`)
+                    : "Review your latest donation date from our records."}
+                </p>
               </div>
             </div>
             <div className="progress-track"><span /></div>
-            <p className="progress-caption">Ready to help someone in need</p>
+            <p className={`progress-caption ${eligibility && !eligibility.isEligible ? "progress-caption-not-eligible" : ""}`}>
+              {eligibilityError || (eligibility
+                ? (eligibility.isEligible ? "Ready to help someone in need" : "Your eligibility will update after the waiting period")
+                : "Click below to check now")}
+            </p>
+            <button className="eligibility-button" disabled={isCheckingEligibility} onClick={handleCheckEligibility} type="button">
+              {isCheckingEligibility ? <><span className="eligibility-spinner" /> Checking...</> : "Check eligibility"}
+            </button>
+            <button className="donation-button" onClick={() => { setDonationError(""); setShowDonationForm(true); }} type="button">
+              Mark as donation
+            </button>
           </section>
 
           <section className="dashboard-panel">
@@ -101,6 +205,8 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
           </section>
         </div>
 
+        <MatchingRequestsList />
+
         <section className="dashboard-panel activity-panel">
           <div className="panel-heading">
             <div>
@@ -114,12 +220,94 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
           </div>
         </section>
       </section>
+      {showDonationForm && (
+        <DonationForm
+          error={donationError}
+          isSaving={isSubmittingDonation}
+          onClose={() => setShowDonationForm(false)}
+          onSubmit={handleMarkDonation}
+          success={donationSuccess}
+        />
+      )}
     </main>
+  );
+}
+
+function DonationForm({ error, isSaving, onClose, onSubmit, success }) {
+  const [form, setForm] = useState({
+    donatedDate: new Date().toISOString().slice(0, 10),
+    unitsDonated: "1",
+    hospitalName: "",
+    requestId: "",
+    status: "completed",
+  });
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit(form);
+  };
+
+  if (success) {
+    return (
+      <div className="donation-modal-overlay">
+        <section aria-live="polite" className="donation-modal donation-success-modal">
+          <div className="donation-success-icon">✓</div>
+          <p className="dashboard-eyebrow">Donation recorded</p>
+          <h2>Thank you for saving lives!</h2>
+          <p>Your donation has been submitted successfully.</p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="donation-modal-overlay">
+      <form className="donation-modal" onSubmit={handleSubmit}>
+        <button aria-label="Close donation form" className="donation-modal-close" onClick={onClose} type="button">×</button>
+        <p className="dashboard-eyebrow">Donation history</p>
+        <h2>Mark a donation</h2>
+        <p className="donation-modal-description">Add the details of your latest blood donation.</p>
+        <div className="donation-form-fields">
+          <label>Donation date<input max={new Date().toISOString().slice(0, 10)} name="donatedDate" onChange={handleChange} required type="date" value={form.donatedDate} /></label>
+          <label>Units donated<select name="unitsDonated" onChange={handleChange} value={form.unitsDonated}><option value="0.5">0.5 units</option><option value="1">1 unit</option><option value="1.5">1.5 units</option><option value="2">2 units</option></select></label>
+          <label className="donation-form-wide">Hospital or blood bank<input name="hospitalName" onChange={handleChange} placeholder="Enter hospital name" required value={form.hospitalName} /></label>
+          <label>Request ID (optional)<input name="requestId" onChange={handleChange} placeholder="Optional" value={form.requestId} /></label>
+          <label>Status<select name="status" onChange={handleChange} value={form.status}><option value="completed">Completed</option><option value="verified">Verified</option></select></label>
+        </div>
+        {error && <p className="donation-form-error" role="alert">{error}</p>}
+        <div className="donation-modal-actions">
+          <button className="donation-cancel-button" onClick={onClose} type="button">Cancel</button>
+          <button className="donation-submit-button" disabled={isSaving} type="submit">{isSaving ? "Submitting..." : "Submit donation"}</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
 function StatCard({ icon, value, label, tone }) {
   return <div className="stat-card"><div className={`stat-icon stat-icon-${tone}`}>{icon}</div><div><strong>{value}</strong><span>{label}</span></div></div>;
+}
+
+function formatDonationDate(dateValue) {
+  if (!dateValue) {
+    return "No record";
+  }
+
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return "No record";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
 function Activity({ icon, title, description, date }) {
@@ -156,6 +344,10 @@ function LogoutIcon() {
 
 function CheckIcon() {
   return <svg className="dashboard-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" /></svg>;
+}
+
+function ClockIcon() {
+  return <svg className="dashboard-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="2" /><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>;
 }
 
 export default DonorDashboard;
