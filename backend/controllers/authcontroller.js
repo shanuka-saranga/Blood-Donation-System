@@ -150,6 +150,87 @@ exports.updateDonorDetails = async (req, res) => {
   }
 };
 
+exports.checkEligibility = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT last_donated_date,
+              (last_donated_date IS NULL OR DATE_ADD(last_donated_date, INTERVAL 3 MONTH) <= CURDATE()) AS is_eligible
+       FROM donor_details
+       WHERE user_id = ?`,
+      [req.user.id],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Complete your donor details before checking eligibility." });
+    }
+
+    const eligibility = Boolean(rows[0].is_eligible);
+    await db.query("UPDATE donor_details SET is_eligible = ? WHERE user_id = ?", [eligibility, req.user.id]);
+
+    return res.status(200).json({
+      isEligible: eligibility,
+      lastDonatedDate: rows[0].last_donated_date || "",
+      message: eligibility
+        ? "You can donate blood."
+        : "You are not eligible to donate yet.",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to check eligibility.", error: error.message });
+  }
+};
+
+exports.markDonation = async (req, res) => {
+  const {
+    requestId, donatedDate, unitsDonated, hospitalName, status = "completed",
+  } = req.body;
+  const units = Number(unitsDonated);
+
+  if (!donatedDate || !hospitalName?.trim() || !Number.isFinite(units) || units <= 0 || units > 5) {
+    return res.status(400).json({ message: "Please provide a valid donation date, hospital, and units between 0 and 5." });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      `INSERT INTO donation_records
+        (donor_id, request_id, donated_date, units_donated, hospital_name, status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.id,
+        requestId || null,
+        donatedDate,
+        units,
+        hospitalName.trim(),
+        status,
+      ],
+    );
+    await connection.query(
+      `UPDATE donor_details
+       SET last_donated_date = ?, is_eligible = FALSE
+       WHERE user_id = ?`,
+      [donatedDate, req.user.id],
+    );
+    await connection.commit();
+
+    return res.status(201).json({
+      message: "Donation recorded successfully.",
+      donation: {
+        donatedDate,
+        unitsDonated: units,
+        hospitalName: hospitalName.trim(),
+        status,
+      },
+      isEligible: false,
+    });
+  } catch (error) {
+    await connection.rollback();
+    return res.status(500).json({ message: "Unable to record donation.", error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
 exports.updateProfile = async (req, res) => {
   const { name, email, phone, bloodGroup, location, profilePicture } = req.body;
 

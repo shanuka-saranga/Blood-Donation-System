@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import DonorDashboard from "./pages/DonorDashboard";
 import DonationCamps from "./pages/DonationCamps";
 import Profile from "./pages/Profile";
+import BloodRequest from "./pages/BloodRequest";
 import "./pages/DonorDetailsModal.css";
 
 function App() {
@@ -80,9 +81,13 @@ function App() {
     );
   }
 
+  if (page === "request-blood") {
+    return <BloodRequest user={user} onBack={() => setPage("dashboard")} onOpenCamps={() => setPage("camps")} onOpenProfile={() => setPage("profile")} onLogout={handleLogout} />;
+  }
+
   const pageContent = page === "camps"
     ? <DonationCamps user={user} onBack={() => setPage("dashboard")} onOpenProfile={() => setPage("profile")} onLogout={handleLogout} />
-    : <DonorDashboard user={user} onLogout={handleLogout} onOpenCamps={() => setPage("camps")} onOpenProfile={() => setPage("profile")} />;
+    : <DonorDashboard user={user} onLogout={handleLogout} onOpenCamps={() => setPage("camps")} onOpenBloodRequest={() => setPage("request-blood")} onOpenProfile={() => setPage("profile")} />;
 
   return (
     <>

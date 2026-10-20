@@ -67,8 +67,81 @@ const ensureDonorDetailsTable = async () => {
   `);
 };
 
+const ensureDonationRecordsTable = async () => {
+  await promisePool.query(`
+    CREATE TABLE IF NOT EXISTS donation_records (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      donor_id INT NOT NULL,
+      request_id INT NULL,
+      donated_date DATE NOT NULL,
+      units_donated DECIMAL(4, 2) NOT NULL,
+      hospital_name VARCHAR(150) NOT NULL,
+      status VARCHAR(30) NOT NULL DEFAULT 'completed',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT fk_donation_records_donor
+        FOREIGN KEY (donor_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+};
+
+const ensureBloodRequestsTable = async () => {
+  await promisePool.query(`
+    CREATE TABLE IF NOT EXISTS blood_requests (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      requester_id INT NULL,
+      blood_group VARCHAR(5) NOT NULL,
+      hospital_name VARCHAR(150) NOT NULL,
+      units_required DECIMAL(4, 2) NOT NULL,
+      urgency VARCHAR(20) NOT NULL DEFAULT 'standard',
+      status VARCHAR(30) NOT NULL DEFAULT 'pending',
+      accepted_by INT NULL,
+      accepted_at TIMESTAMP NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT fk_blood_requests_requester
+        FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE SET NULL,
+      CONSTRAINT fk_blood_requests_acceptor
+        FOREIGN KEY (accepted_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  const columns = [
+    ["requester_id", "INT NULL"],
+    ["patient_name", "VARCHAR(150) NULL"],
+    ["blood_group", "VARCHAR(5) NULL"],
+    ["hospital_name", "VARCHAR(150) NULL"],
+    ["city", "VARCHAR(100) NULL"],
+    ["contact_number", "VARCHAR(30) NULL"],
+    ["units_required", "DECIMAL(4, 2) NULL"],
+    ["urgency_level", "VARCHAR(20) NULL"],
+    ["urgency", "VARCHAR(20) NOT NULL DEFAULT 'standard'"],
+    ["status", "VARCHAR(30) NOT NULL DEFAULT 'pending'"],
+    ["required_date", "DATE NULL"],
+    ["accepted_by", "INT NULL"],
+    ["accepted_at", "TIMESTAMP NULL"],
+    ["created_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ["updated_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"],
+  ];
+
+  for (const [name, definition] of columns) {
+    const [existingColumns] = await promisePool.query(
+      `SELECT COUNT(*) AS count
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'blood_requests' AND COLUMN_NAME = ?`,
+      [name],
+    );
+
+    if (existingColumns[0].count === 0) {
+      await promisePool.query(`ALTER TABLE blood_requests ADD COLUMN ${name} ${definition}`);
+    }
+  }
+};
+
 promisePool.testConnection = testConnection;
 promisePool.ensureProfileColumns = ensureProfileColumns;
 promisePool.ensureDonorDetailsTable = ensureDonorDetailsTable;
+promisePool.ensureDonationRecordsTable = ensureDonationRecordsTable;
+promisePool.ensureBloodRequestsTable = ensureBloodRequestsTable;
 
 module.exports = promisePool;
