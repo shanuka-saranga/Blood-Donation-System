@@ -1,6 +1,7 @@
 import "./DonorDashboard.css";
+import PageTopbar from "../components/PageTopbar";
 
-function DonorDashboard({ user, onLogout, onOpenCamps }) {
+function DonorDashboard({ user, onLogout, onOpenCamps, onOpenProfile }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
 
   return (
@@ -21,7 +22,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps }) {
           <button className="dashboard-nav-item" type="button">
             <HistoryIcon /> My donations
           </button>
-          <button className="dashboard-nav-item" type="button">
+          <button className="dashboard-nav-item" onClick={onOpenProfile} type="button">
             <ProfileIcon /> My profile
           </button>
         </nav>
@@ -32,18 +33,12 @@ function DonorDashboard({ user, onLogout, onOpenCamps }) {
       </aside>
 
       <section className="dashboard-content">
+        <PageTopbar onOpenProfile={onOpenProfile} user={user} />
         <header className="dashboard-header">
           <div>
             <p className="dashboard-eyebrow">Donor dashboard</p>
             <h1>Good morning, {firstName}!</h1>
             <p className="dashboard-subtitle">Your generosity can save up to three lives.</p>
-          </div>
-          <div className="dashboard-user">
-            <div className="dashboard-avatar">{firstName.charAt(0).toUpperCase()}</div>
-            <div>
-              <strong>{user.name}</strong>
-              <span>Blood donor</span>
-            </div>
           </div>
         </header>
 
