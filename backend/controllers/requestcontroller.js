@@ -123,3 +123,17 @@ exports.acceptRequest = async (req, res) => {
     return res.status(500).json({ message: "Unable to accept request.", error: error.message });
   }
 };
+
+exports.reviewRequest = async (req, res) => {
+  const status = req.params.action === "approve" ? "approved" : "declined";
+  try {
+    const [result] = await db.query(
+      "UPDATE blood_requests SET status = ? WHERE id = ? AND LOWER(status) IN ('pending', 'open', 'active')",
+      [status, req.params.requestId],
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: "Active blood request not found." });
+    return res.status(200).json({ message: `Blood request ${status} successfully.` });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to review blood request.", error: error.message });
+  }
+};
