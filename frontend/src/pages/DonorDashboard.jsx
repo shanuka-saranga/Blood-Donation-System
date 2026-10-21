@@ -4,14 +4,15 @@ import "./DonorDashboard.css";
 import PageTopbar from "../components/PageTopbar";
 import MatchingRequestsList from "../components/MatchingRequestsList";
 
-function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenDonations, onOpenProfile }) {
+function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenDonations, onOpenProfile, onOpenMarkDonation, latestDonationDate }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
-  const greeting = getTimeGreeting();
+  const [timeOfDay, setTimeOfDay] = useState(getTimeOfDay);
   const eligibilityStorageKey = `eligibility:${user.id}`;
   const lastDonationStorageKey = `lastDonation:${user.id}`;
   const [lastDonatedDate, setLastDonatedDate] = useState(
-    () => localStorage.getItem(lastDonationStorageKey) || "",
+    () => latestDonationDate || localStorage.getItem(lastDonationStorageKey) || "",
   );
+  const [totalDonations, setTotalDonations] = useState(0);
   const [eligibility, setEligibility] = useState(() => {
     try {
       const savedEligibility = localStorage.getItem(eligibilityStorageKey);
@@ -30,6 +31,31 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
   const [upcomingCamps, setUpcomingCamps] = useState([]);
   const [campsError, setCampsError] = useState("");
   const [selectedCamp, setSelectedCamp] = useState(null);
+
+  useEffect(() => {
+    const refreshTimeOfDay = () => setTimeOfDay(getTimeOfDay());
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        refreshTimeOfDay();
+      }
+    };
+    const intervalId = window.setInterval(refreshTimeOfDay, 60 * 1000);
+
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshTimeOfDay);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshTimeOfDay);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!latestDonationDate) return;
+    setLastDonatedDate(latestDonationDate);
+    localStorage.setItem(lastDonationStorageKey, latestDonationDate);
+  }, [latestDonationDate, lastDonationStorageKey]);
 
   useEffect(() => {
     const loadUpcomingCamps = async () => {
@@ -58,12 +84,65 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
   };
 
   useEffect(() => {
-    const loadLastDonation = async () => {
+    const loadDonationSummary = async () => {
+      try {
+        const savedDonationDate = localStorage.getItem(lastDonationStorageKey) || "";
+        const headers = {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+        };
+        const [donationsResult, eligibilityResult] = await Promise.allSettled([
+            axios.get("http://localhost:5000/api/auth/donations", headers),
+            axios.get("http://localhost:5000/api/auth/eligibility", headers),
+        ]);
+
+        if (donationsResult.status === "rejected") {
+            throw donationsResult.reason;
+        }
+
+        const donations = Array.isArray(donationsResult.value.data.donations)
+            ? donationsResult.value.data.donations
+            : [];
+        const latestDate = donations[0]?.donated_date || "";
+        const displayedDate = latestDonationDate || savedDonationDate || latestDate;
+
+        setTotalDonations(donations.length);
+        setLastDonatedDate(displayedDate);
+        if (displayedDate) {
+            localStorage.setItem(lastDonationStorageKey, displayedDate);
+        }
+
+        if (eligibilityResult.status === "fulfilled") {
+            updateEligibility({
+              isEligible: eligibilityResult.value.data.isEligible,
+              lastDonatedDate: displayedDate
+                  || eligibilityResult.value.data.lastDonatedDate
+                  || latestDate,
+              message: eligibilityResult.value.data.message,
+            });
+        } else if (eligibilityResult.reason.response?.status === 401) {
+            setEligibilityError("Your session has expired. Please sign in again.");
+        } else if (eligibilityResult.reason.response?.status === 404) {
+            setEligibilityError(eligibilityResult.reason.response.data.message);
+        }
+      } catch (error) {
+        if (error.response?.status === 401) {
+            setEligibilityError("Your session has expired. Please sign in again.");
+        }
+      }
+    };
+
+    loadDonationSummary();
+  }, [lastDonationStorageKey]);
+
+  /* Keep the overview cards in sync when a donation is submitted here. */
+  const refreshDonationSummary = async () => {
       try {
         const response = await axios.get("http://localhost:5000/api/auth/donations", {
-          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-        });
-        const latestDate = response.data.donations?.[0]?.donated_date || "";
+            headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+          });
+        const donations = Array.isArray(response.data.donations) ? response.data.donations : [];
+        const latestDate = donations[0]?.donated_date || "";
+        setTotalDonations(donations.length);
         setLastDonatedDate(latestDate);
         if (latestDate) {
           localStorage.setItem(lastDonationStorageKey, latestDate);
@@ -73,10 +152,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
           setEligibilityError("Your session has expired. Please sign in again.");
         }
       }
-    };
-
-    loadLastDonation();
-  }, [lastDonationStorageKey]);
+  };
 
   const handleCheckEligibility = async () => {
     setIsCheckingEligibility(true);
@@ -105,6 +181,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
         lastDonatedDate: response.data.donation?.donatedDate || donation.donatedDate,
         message: response.data.message,
       });
+      await refreshDonationSummary();
       setDonationSuccess(true);
       setTimeout(() => {
         setDonationSuccess(false);
@@ -138,6 +215,9 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
           <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
           </button>
+          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+            <CheckIcon /> Mark as donated
+          </button>
           <button className="dashboard-nav-item" onClick={onOpenProfile} type="button">
             <ProfileIcon /> My profile
           </button>
@@ -153,7 +233,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
         <header className="dashboard-header">
           <div>
             <p className="dashboard-eyebrow">Donor dashboard</p>
-            <h1>{greeting}, {firstName}!</h1>
+            <h1>Good {timeOfDay}, {firstName}!</h1>
             <p className="dashboard-subtitle">Your generosity can save up to three lives.</p>
           </div>
         </header>
@@ -176,7 +256,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
         </section>
 
         <section className="dashboard-stats" aria-label="Donation statistics">
-          <StatCard icon={<HeartIcon />} value="3" label="Total donations" tone="red" />
+          <StatCard icon={<HeartIcon />} value={totalDonations} label="Total donations" tone="red" />
           <StatCard
             icon={<CalendarIcon />}
             value={formatDonationDate(lastDonatedDate)}
@@ -254,16 +334,18 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
               <p className="progress-caption"><span className="eligibility-spinner" /> Checking eligibility...</p>
             )}
             {eligibilityError && <p className="progress-caption progress-caption-not-eligible" role="alert">{eligibilityError}</p>}
-            {eligibility && (
-              <button
-                className="donation-button"
-                disabled={!eligibility.isEligible}
-                onClick={() => { setDonationError(""); setShowDonationForm(true); }}
-                type="button"
-              >
-                {eligibility.isEligible ? "Mark as donation" : "Not eligible to donate"}
-              </button>
-            )}
+            <button
+              className="donation-button"
+              disabled={!eligibility || !eligibility.isEligible}
+              onClick={onOpenMarkDonation}
+              type="button"
+            >
+              {!eligibility
+                ? "Check eligibility first"
+                : eligibility.isEligible
+                  ? "Mark as donated"
+                  : "Not eligible to donate"}
+            </button>
           </section>
 
           <section className="dashboard-panel">
@@ -331,15 +413,6 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
       )}
     </main>
   );
-}
-
-function getTimeGreeting() {
-  const hour = new Date().getHours();
-
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 21) return "Good evening";
-  return "Good night";
 }
 
 function CampDetailsModal({ camp, onClose }) {
@@ -417,8 +490,8 @@ function DonationForm({ error, isSaving, onClose, onSubmit, success }) {
       <form className="donation-modal" onSubmit={handleSubmit}>
         <button aria-label="Close donation form" className="donation-modal-close" onClick={onClose} type="button">×</button>
         <p className="dashboard-eyebrow">Donation history</p>
-        <h2>Mark a donation</h2>
-        <p className="donation-modal-description">Add the details of your latest blood donation.</p>
+        <h2>Mark as donated</h2>
+        <p className="donation-modal-description">Add the details of the blood donation you completed.</p>
         <div className="donation-form-fields">
           <label>Donation date<input max={new Date().toISOString().slice(0, 10)} name="donatedDate" onChange={handleChange} required type="date" value={form.donatedDate} /></label>
           <label>Units donated<select name="unitsDonated" onChange={handleChange} value={form.unitsDonated}><option value="0.5">0.5 units</option><option value="1">1 unit</option><option value="1.5">1.5 units</option><option value="2">2 units</option></select></label>
@@ -434,6 +507,13 @@ function DonationForm({ error, isSaving, onClose, onSubmit, success }) {
       </form>
     </div>
   );
+}
+
+function getTimeOfDay() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 18) return "afternoon";
+  return "evening";
 }
 
 function StatCard({ icon, value, label, tone }) {
