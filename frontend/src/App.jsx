@@ -5,10 +5,24 @@ import DonorDashboard from "./pages/DonorDashboard";
 import DonationCamps from "./pages/DonationCamps";
 import Profile from "./pages/Profile";
 import BloodRequest from "./pages/BloodRequest";
+import DonationHistory from "./pages/DonationHistory";
 import "./pages/DonorDetailsModal.css";
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const token = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
+
+    if (!token || !storedUser) return null;
+
+    try {
+      return JSON.parse(storedUser);
+    } catch {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return null;
+    }
+  });
   const [page, setPage] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("darkMode") === "true",
@@ -16,12 +30,17 @@ function App() {
   const [isSavingDonorDetails, setIsSavingDonorDetails] = useState(false);
   const [donorDetailsError, setDonorDetailsError] = useState("");
   const [showDonorDetailsSuccess, setShowDonorDetailsSuccess] = useState(false);
-  const [showDonorDetailsModal, setShowDonorDetailsModal] = useState(false);
+  const [showDonorDetailsModal, setShowDonorDetailsModal] = useState(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return false;
 
-  useEffect(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  }, []);
+    try {
+      const restoredUser = JSON.parse(storedUser);
+      return restoredUser.role === "donor" && !restoredUser.donorDetailsComplete;
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
@@ -91,6 +110,8 @@ function App() {
       <DonationCamps
         user={user}
         onBack={() => setPage("dashboard")}
+        onOpenBloodRequest={() => setPage("request-blood")}
+        onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
         onLogout={handleLogout}
       />
@@ -105,6 +126,7 @@ function App() {
           onBack={() => setPage("dashboard")}
           onOpenCamps={() => setPage("camps")}
           onOpenBloodRequest={() => setPage("request-blood")}
+          onOpenDonations={() => setPage("donations")}
           onLogout={handleLogout}
           onToggleDarkMode={() => setDarkMode((current) => !current)}
           user={user}
@@ -120,6 +142,20 @@ function App() {
         user={user}
         onBack={() => setPage("dashboard")}
         onOpenCamps={() => setPage("camps")}
+        onOpenDonations={() => setPage("donations")}
+        onOpenProfile={() => setPage("profile")}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (page === "donations") {
+    return (
+      <DonationHistory
+        user={user}
+        onBack={() => setPage("dashboard")}
+        onOpenCamps={() => setPage("camps")}
+        onOpenBloodRequest={() => setPage("request-blood")}
         onOpenProfile={() => setPage("profile")}
         onLogout={handleLogout}
       />
@@ -132,6 +168,7 @@ function App() {
         user={user}
         onBack={() => setPage("dashboard")}
         onOpenBloodRequest={() => setPage("request-blood")}
+        onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
         onLogout={handleLogout}
       />
@@ -141,6 +178,7 @@ function App() {
         onLogout={handleLogout}
         onOpenCamps={() => setPage("camps")}
         onOpenBloodRequest={() => setPage("request-blood")}
+        onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
       />
     );

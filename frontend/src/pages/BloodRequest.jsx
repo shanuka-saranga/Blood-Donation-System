@@ -14,7 +14,7 @@ const initialForm = {
   requiredDate: "",
 };
 
-function BloodRequest({ user, onBack, onOpenCamps, onOpenProfile, onLogout }) {
+function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfile, onLogout }) {
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -77,7 +77,7 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenProfile, onLogout }) {
           >
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" type="button">
+          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
           </button>
           <button

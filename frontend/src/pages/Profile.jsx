@@ -12,6 +12,7 @@ function Profile({
   onBack,
   onOpenCamps,
   onOpenBloodRequest,
+  onOpenDonations,
   onLogout,
   darkMode,
   onToggleDarkMode,
@@ -217,7 +218,7 @@ function Profile({
           >
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" onClick={onBack} type="button">
+          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
           </button>
           <button
