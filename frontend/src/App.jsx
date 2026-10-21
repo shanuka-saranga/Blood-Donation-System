@@ -6,6 +6,7 @@ import DonationCamps from "./pages/DonationCamps";
 import Profile from "./pages/Profile";
 import BloodRequest from "./pages/BloodRequest";
 import DonationHistory from "./pages/DonationHistory";
+import MarkDonation from "./pages/MarkDonation";
 import "./pages/DonorDetailsModal.css";
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
     }
   });
   const [page, setPage] = useState("dashboard");
+  const [latestDonationDate, setLatestDonationDate] = useState("");
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("darkMode") === "true",
   );
@@ -112,6 +114,7 @@ function App() {
         onOpenBloodRequest={() => setPage("request-blood")}
         onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
+        onOpenMarkDonation={() => setPage("mark-donation")}
         onLogout={handleLogout}
       />
     );
@@ -126,6 +129,7 @@ function App() {
           onOpenCamps={() => setPage("camps")}
           onOpenBloodRequest={() => setPage("request-blood")}
           onOpenDonations={() => setPage("donations")}
+          onOpenMarkDonation={() => setPage("mark-donation")}
           onLogout={handleLogout}
           onToggleDarkMode={() => setDarkMode((current) => !current)}
           user={user}
@@ -143,6 +147,7 @@ function App() {
         onOpenCamps={() => setPage("camps")}
         onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
+        onOpenMarkDonation={() => setPage("mark-donation")}
         onLogout={handleLogout}
       />
     );
@@ -155,6 +160,22 @@ function App() {
         onBack={() => setPage("dashboard")}
         onOpenCamps={() => setPage("camps")}
         onOpenBloodRequest={() => setPage("request-blood")}
+        onOpenProfile={() => setPage("profile")}
+        onOpenMarkDonation={() => setPage("mark-donation")}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (page === "mark-donation") {
+    return (
+      <MarkDonation
+        user={user}
+        onDonationRecorded={setLatestDonationDate}
+        onBack={() => setPage("dashboard")}
+        onOpenCamps={() => setPage("camps")}
+        onOpenBloodRequest={() => setPage("request-blood")}
+        onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
         onLogout={handleLogout}
       />
@@ -179,6 +200,8 @@ function App() {
         onOpenBloodRequest={() => setPage("request-blood")}
         onOpenDonations={() => setPage("donations")}
         onOpenProfile={() => setPage("profile")}
+        onOpenMarkDonation={() => setPage("mark-donation")}
+        latestDonationDate={latestDonationDate}
       />
     );
 
