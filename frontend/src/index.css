@@ -8,9 +8,98 @@ body,
   margin: 0;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+body {
+  overflow-x: hidden;
+}
+
 body {
   font-family: poppins, sans-serif;
 
+}
+
+.dashboard-sidebar {
+  display: flex;
+  width: 250px;
+  height: 100vh;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: 28px 18px;
+  color: #fee2e2;
+  background: #991b1b;
+}
+
+.dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dashboard-brand-icon,
+.dashboard-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.dashboard-brand-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dashboard-nav {
+  display: grid;
+  gap: 8px;
+  margin-top: 56px;
+}
+
+.dashboard-nav-item,
+.dashboard-logout {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 12px;
+  color: #fecaca;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-nav-item:hover,
+.dashboard-nav-item-active {
+  color: #fff;
+  background: #b91c1c;
+}
+
+.dashboard-logout {
+  margin-top: auto;
+}
+
+.dashboard-logout:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .page-topbar {
@@ -128,4 +217,57 @@ html[data-theme="dark"] .page-topbar {
 
 html[data-theme="dark"] .page-user-role {
   color: #fca5a5;
+}
+
+@media (max-width: 1050px) {
+  .dashboard-sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-sidebar {
+    width: 100%;
+    height: auto;
+    padding: 16px 20px;
+  }
+
+  .dashboard-nav {
+    display: flex;
+    margin-top: 18px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+
+  .dashboard-nav-item {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .dashboard-logout {
+    position: absolute;
+    top: 15px;
+    right: 16px;
+    width: auto;
+    margin: 0;
+    font-size: 0;
+  }
+
+  .dashboard-logout .dashboard-icon {
+    width: 21px;
+    height: 21px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-topbar {
+    margin-bottom: 18px;
+    padding: 7px 10px;
+  }
+
+  .page-user-role {
+    margin-left: 7px;
+  }
 }

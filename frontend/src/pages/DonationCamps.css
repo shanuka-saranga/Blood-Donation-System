@@ -272,4 +272,8 @@
   .map-panel,
   .camp-list-panel { padding: 18px; }
   .map-frame { height: 320px; }
+  .map-heading { align-items: flex-start; }
+  .map-heading h2 { font-size: 17px; }
+  .location-count { flex-shrink: 0; }
+  .camp-search { padding: 12px 14px; }
 }

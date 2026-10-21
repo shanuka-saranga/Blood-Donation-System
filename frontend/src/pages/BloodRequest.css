@@ -26,6 +26,7 @@
 
 .blood-request-workspace {
     display: grid;
+    width: 100%;
     grid-template-columns: minmax(0, 760px) minmax(220px, 1fr);
     align-items: stretch;
     gap: 52px;
@@ -251,9 +252,25 @@
     }
 }
 
+@media (max-width: 800px) {
+    .blood-request-page {
+        display: block;
+    }
+
+    .blood-request-content {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+}
+
 @media (max-width: 600px) {
     .blood-request-content {
         padding: 24px 16px;
+    }
+
+    .blood-request-workspace {
+        gap: 24px;
     }
 
     .blood-request-header h1 {
@@ -266,6 +283,10 @@
 
     .blood-request-form {
         padding: 20px;
+    }
+
+    .blood-request-submit {
+        width: 100%;
     }
 
     .blood-request-visual {

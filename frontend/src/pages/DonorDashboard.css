@@ -1025,6 +1025,16 @@
     padding: 26px 22px;
   }
 
+  .hero-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .primary-dashboard-button,
+  .secondary-dashboard-button {
+    justify-content: center;
+  }
+
   .hero-card-heart {
     display: none;
   }
