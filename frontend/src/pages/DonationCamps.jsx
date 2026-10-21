@@ -41,6 +41,7 @@ function DonationCamps({
   user,
   onBack,
   onOpenBloodRequest,
+  onOpenDonations,
   onOpenProfile,
   onLogout,
 }) {
@@ -96,7 +97,7 @@ function DonationCamps({
           >
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" onClick={onBack} type="button">
+          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
           </button>
           <button
