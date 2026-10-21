@@ -26,6 +26,7 @@ function App() {
   });
   const [page, setPage] = useState("dashboard");
   const [latestDonationDate, setLatestDonationDate] = useState("");
+  const [latestActivity, setLatestActivity] = useState(null);
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("darkMode") === "true",
   );
@@ -171,7 +172,10 @@ function App() {
     return (
       <MarkDonation
         user={user}
-        onDonationRecorded={setLatestDonationDate}
+        onDonationRecorded={(donation) => {
+          setLatestDonationDate(donation.date);
+          setLatestActivity(donation);
+        }}
         onBack={() => setPage("dashboard")}
         onOpenCamps={() => setPage("camps")}
         onOpenBloodRequest={() => setPage("request-blood")}
@@ -202,6 +206,7 @@ function App() {
         onOpenProfile={() => setPage("profile")}
         onOpenMarkDonation={() => setPage("mark-donation")}
         latestDonationDate={latestDonationDate}
+        latestActivity={latestActivity}
       />
     );
 
