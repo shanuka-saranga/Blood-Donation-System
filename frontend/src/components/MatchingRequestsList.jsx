@@ -12,9 +12,8 @@ function MatchingRequestsList() {
   useEffect(() => {
     const fetchMatchingRequests = async () => {
       try {
-        const token = localStorage.getItem("token");
         const response = await axios.get(`${API_BASE_URL}/matching`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         });
         const matchingRequests = response.data.requests || response.data;
         setRequests(Array.isArray(matchingRequests) ? matchingRequests : []);
@@ -33,9 +32,8 @@ function MatchingRequestsList() {
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
       await axios.post(`${API_BASE_URL}/${requestId}/accept`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       });
       setRequests((currentRequests) => currentRequests.filter((request) => request.id !== requestId));
     } catch (requestError) {

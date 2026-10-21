@@ -58,12 +58,11 @@ function App() {
     setIsSavingDonorDetails(true);
     setDonorDetailsError("");
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.put(
         "http://localhost:5000/api/auth/donor-details",
         details,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         },
       );
       const updatedUser = {
