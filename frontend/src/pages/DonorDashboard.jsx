@@ -4,7 +4,7 @@ import "./DonorDashboard.css";
 import PageTopbar from "../components/PageTopbar";
 import MatchingRequestsList from "../components/MatchingRequestsList";
 
-function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenProfile }) {
+function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenDonations, onOpenProfile }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
   const [eligibility, setEligibility] = useState(user.donorDetails ? {
     isEligible: Boolean(user.donorDetails.isEligible),
@@ -82,7 +82,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
           <button className="dashboard-nav-item" onClick={onOpenBloodRequest} type="button">
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" type="button">
+          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
           </button>
           <button className="dashboard-nav-item" onClick={onOpenProfile} type="button">
