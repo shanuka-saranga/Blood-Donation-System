@@ -1,6 +1,7 @@
 .donation-history-page {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   color: #1e293b;
   background: #fff7f7;
 }
@@ -8,6 +9,9 @@
 .donation-history-content {
   width: 100%;
   min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: 32px 52px 44px;
 }
 
@@ -193,11 +197,11 @@ html[data-theme="dark"] .donation-details-list dd {
 }
 
 @media (max-width: 800px) {
-  .donation-history-page { display: block; }
+  .donation-history-page { display: block; height: auto; overflow: visible; }
 }
 
 @media (max-width: 600px) {
-  .donation-history-content { padding: 22px 16px 30px; }
+  .donation-history-content { height: auto; overflow: visible; padding: 22px 16px 30px; }
   .donation-history-header h1 { font-size: 28px; }
   .donation-records-panel,
   .donation-details-card,

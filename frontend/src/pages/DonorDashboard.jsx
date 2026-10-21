@@ -4,7 +4,7 @@ import "./DonorDashboard.css";
 import PageTopbar from "../components/PageTopbar";
 import MatchingRequestsList from "../components/MatchingRequestsList";
 
-function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenDonations, onOpenProfile, onOpenMarkDonation, latestDonationDate }) {
+function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenDonations, onOpenProfile, onOpenMarkDonation, latestDonationDate, latestActivity }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
   const [timeOfDay, setTimeOfDay] = useState(getTimeOfDay);
   const eligibilityStorageKey = `eligibility:${user.id}`;
@@ -31,6 +31,30 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
   const [upcomingCamps, setUpcomingCamps] = useState([]);
   const [campsError, setCampsError] = useState("");
   const [selectedCamp, setSelectedCamp] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [activityError, setActivityError] = useState("");
+
+  const loadActivities = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/auth/activity", {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      });
+      const loadedActivities = Array.isArray(response.data.activities)
+        ? response.data.activities
+        : [];
+      setActivities(latestActivity
+        ? [
+          latestActivity,
+          ...loadedActivities.filter((activity) => (
+            activity.type !== latestActivity.type || activity.date !== latestActivity.date
+          )),
+        ].slice(0, 5)
+        : loadedActivities);
+      setActivityError("");
+    } catch (error) {
+      setActivityError(error.response?.data?.message || "Unable to load recent activity.");
+    }
+  };
 
   useEffect(() => {
     const refreshTimeOfDay = () => setTimeOfDay(getTimeOfDay());
@@ -56,6 +80,31 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
     setLastDonatedDate(latestDonationDate);
     localStorage.setItem(lastDonationStorageKey, latestDonationDate);
   }, [latestDonationDate, lastDonationStorageKey]);
+
+  useEffect(() => {
+    if (!latestActivity) return;
+    setActivities((currentActivities) => [
+      latestActivity,
+      ...currentActivities.filter((activity) => (
+        activity.type !== latestActivity.type || activity.date !== latestActivity.date
+      )),
+    ].slice(0, 5));
+  }, [latestActivity]);
+
+  useEffect(() => {
+    const refreshActivitiesWhenVisible = () => {
+      if (document.visibilityState === "visible") loadActivities();
+    };
+    loadActivities();
+    document.addEventListener("visibilitychange", refreshActivitiesWhenVisible);
+    window.addEventListener("focus", loadActivities);
+    const activityRefreshId = window.setInterval(loadActivities, 15000);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshActivitiesWhenVisible);
+      window.removeEventListener("focus", loadActivities);
+      window.clearInterval(activityRefreshId);
+    };
+  }, []);
 
   useEffect(() => {
     const loadUpcomingCamps = async () => {
@@ -381,7 +430,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
           </section>
         </div>
 
-        <MatchingRequestsList />
+        <MatchingRequestsList onActivityChanged={loadActivities} />
 
         <section className="dashboard-panel activity-panel">
           <div className="panel-heading">
@@ -390,10 +439,23 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
               <h2>Recent activity</h2>
             </div>
           </div>
+          {activityError && <p className="camp-item-message" role="alert">{activityError}</p>}
+          {!activityError && activities.length === 0 && (
+          <p className="camp-item-message">No recent activity yet.</p>
+          )}
+          {activities.length > 0 && (
           <div className="activity-list">
-            <Activity icon={<CheckIcon />} title="Donation completed" description="Your blood donation was recorded successfully." date="12 Jun 2025" />
-            <Activity icon={<CalendarIcon />} title="Camp reminder" description="You registered interest in the University of Ruhuna camp." date="05 Jun 2025" />
+            {activities.map((activity, index) => (
+              <Activity
+                date={formatActivityDate(activity.date)}
+                description={activity.description}
+                icon={activity.type === "request" ? <HeartIcon /> : <CheckIcon />}
+                key={`${activity.type}-${activity.date}-${index}`}
+                title={activity.title}
+              />
+            ))}
           </div>
+          )}
         </section>
       </section>
       {showDonationForm && (
@@ -535,6 +597,18 @@ function formatDonationDate(dateValue) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function formatActivityDate(dateValue) {
+  if (!dateValue) return "Date unavailable";
+  const date = new Date(dateValue);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
 }
 
 function formatCampDay(value) {
