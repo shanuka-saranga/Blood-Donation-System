@@ -404,6 +404,27 @@
   overflow: hidden;
 }
 
+.eligibility-panel-eligible {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.eligibility-panel-not-eligible {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.eligibility-panel-not-eligible::after {
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(239, 68, 68, 0.04) 42%,
+    rgba(239, 68, 68, 0.16) 50%,
+    rgba(239, 68, 68, 0.04) 58%,
+    transparent 100%
+  );
+}
+
 .eligibility-panel::after {
   position: absolute;
   top: -35%;
@@ -471,8 +492,8 @@
 }
 
 .status-pill-not-eligible {
-  color: #b45309;
-  background: #fef3c7;
+  color: #b91c1c;
+  background: #fee2e2;
 }
 
 .eligibility-row {
@@ -494,8 +515,8 @@
 }
 
 .eligibility-icon-not-eligible {
-  color: #d97706;
-  background: #fef3c7;
+  color: #dc2626;
+  background: #fee2e2;
 }
 
 .eligibility-row strong,
@@ -535,7 +556,7 @@
 }
 
 .progress-caption-not-eligible {
-  color: #b45309;
+  color: #b91c1c;
 }
 
 .eligibility-button {
@@ -561,6 +582,14 @@
 .eligibility-button:disabled {
   opacity: .75;
   cursor: wait;
+}
+
+.donation-button:disabled {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fee2e2;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .donation-button {
@@ -788,6 +817,28 @@
   border-top: 1px solid #f1f5f9;
 }
 
+.camp-item {
+  width: 100%;
+  color: inherit;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.camp-item:hover {
+  background: #fff7f7;
+}
+
+.camp-item-message {
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
 .camp-date {
   display: grid;
   width: 40px;
@@ -811,6 +862,34 @@
 .camp-item>.dashboard-icon {
   margin-left: auto;
   color: #94a3b8;
+}
+
+.camp-details-list {
+  display: grid;
+  gap: 12px;
+  margin: 22px 0 0;
+}
+
+.camp-details-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 11px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.camp-details-list dt {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.camp-details-list dd {
+  max-width: 65%;
+  margin: 0;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
 }
 
 .activity-panel {

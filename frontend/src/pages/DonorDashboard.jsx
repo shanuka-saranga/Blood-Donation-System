@@ -6,25 +6,86 @@ import MatchingRequestsList from "../components/MatchingRequestsList";
 
 function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpenDonations, onOpenProfile }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
-  const [eligibility, setEligibility] = useState(user.donorDetails ? {
-    isEligible: Boolean(user.donorDetails.isEligible),
-    lastDonatedDate: user.donorDetails.lastDonatedDate || "",
-  } : null);
+  const greeting = getTimeGreeting();
+  const eligibilityStorageKey = `eligibility:${user.id}`;
+  const lastDonationStorageKey = `lastDonation:${user.id}`;
+  const [lastDonatedDate, setLastDonatedDate] = useState(
+    () => localStorage.getItem(lastDonationStorageKey) || "",
+  );
+  const [eligibility, setEligibility] = useState(() => {
+    try {
+      const savedEligibility = localStorage.getItem(eligibilityStorageKey);
+      return savedEligibility ? JSON.parse(savedEligibility) : null;
+    } catch {
+      localStorage.removeItem(eligibilityStorageKey);
+      return null;
+    }
+  });
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [eligibilityError, setEligibilityError] = useState("");
   const [showDonationForm, setShowDonationForm] = useState(false);
   const [isSubmittingDonation, setIsSubmittingDonation] = useState(false);
   const [donationError, setDonationError] = useState("");
   const [donationSuccess, setDonationSuccess] = useState(false);
+  const [upcomingCamps, setUpcomingCamps] = useState([]);
+  const [campsError, setCampsError] = useState("");
+  const [selectedCamp, setSelectedCamp] = useState(null);
+
+  useEffect(() => {
+    const loadUpcomingCamps = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/auth/camps", {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+        });
+        setUpcomingCamps(
+          Array.isArray(response.data.camps) ? response.data.camps.slice(0, 2) : [],
+        );
+      } catch (error) {
+        setCampsError(error.response?.data?.message || "Unable to load upcoming camps.");
+      }
+    };
+
+    loadUpcomingCamps();
+  }, []);
+
+  const updateEligibility = (nextEligibility) => {
+    setEligibility(nextEligibility);
+    if (nextEligibility.lastDonatedDate) {
+      setLastDonatedDate(nextEligibility.lastDonatedDate);
+      localStorage.setItem(lastDonationStorageKey, nextEligibility.lastDonatedDate);
+    }
+    localStorage.setItem(eligibilityStorageKey, JSON.stringify(nextEligibility));
+  };
+
+  useEffect(() => {
+    const loadLastDonation = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/auth/donations", {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+        });
+        const latestDate = response.data.donations?.[0]?.donated_date || "";
+        setLastDonatedDate(latestDate);
+        if (latestDate) {
+          localStorage.setItem(lastDonationStorageKey, latestDate);
+        }
+      } catch (error) {
+        if (error.response?.status === 401) {
+          setEligibilityError("Your session has expired. Please sign in again.");
+        }
+      }
+    };
+
+    loadLastDonation();
+  }, [lastDonationStorageKey]);
 
   const handleCheckEligibility = async () => {
     setIsCheckingEligibility(true);
     setEligibilityError("");
     try {
       const response = await axios.get("http://localhost:5000/api/auth/eligibility", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       });
-      setEligibility(response.data);
+      updateEligibility(response.data);
     } catch (error) {
       setEligibilityError(error.response?.data?.message || "Unable to check eligibility.");
     } finally {
@@ -37,9 +98,9 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
     setDonationError("");
     try {
       const response = await axios.post("http://localhost:5000/api/auth/donations", donation, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       });
-      setEligibility({
+      updateEligibility({
         isEligible: response.data.isEligible,
         lastDonatedDate: response.data.donation?.donatedDate || donation.donatedDate,
         message: response.data.message,
@@ -55,14 +116,6 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
       setIsSubmittingDonation(false);
     }
   };
-
-  useEffect(() => {
-    const refreshTimer = window.setTimeout(() => {
-      handleCheckEligibility();
-    }, 0);
-
-    return () => window.clearTimeout(refreshTimer);
-  }, []);
 
   return (
     <main className="dashboard-page">
@@ -100,7 +153,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
         <header className="dashboard-header">
           <div>
             <p className="dashboard-eyebrow">Donor dashboard</p>
-            <h1>Good morning, {firstName}!</h1>
+            <h1>{greeting}, {firstName}!</h1>
             <p className="dashboard-subtitle">Your generosity can save up to three lives.</p>
           </div>
         </header>
@@ -126,7 +179,7 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
           <StatCard icon={<HeartIcon />} value="3" label="Total donations" tone="red" />
           <StatCard
             icon={<CalendarIcon />}
-            value={formatDonationDate(eligibility?.lastDonatedDate)}
+            value={formatDonationDate(lastDonatedDate)}
             label="Last donation"
             tone="blue"
           />
@@ -139,49 +192,78 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
         </section>
 
         <div className="dashboard-grid">
-          <section className="dashboard-panel eligibility-panel">
+          <section className={`dashboard-panel eligibility-panel ${
+            eligibility
+              ? (eligibility.isEligible ? "eligibility-panel-eligible" : "eligibility-panel-not-eligible")
+              : ""
+          }`}>
             <div className="panel-heading">
               <div>
                 <p className="panel-eyebrow">Stay ready</p>
                 <h2>Donation eligibility</h2>
               </div>
-              <span className={`status-pill ${eligibility && !eligibility.isEligible ? "status-pill-not-eligible" : ""}`}>
-                {eligibility ? (eligibility.isEligible ? "Eligible now" : "Not eligible yet") : "Not checked"}
-              </span>
+              {eligibility && (
+                <span className={`status-pill ${!eligibility.isEligible ? "status-pill-not-eligible" : ""}`}>
+                  {eligibility.isEligible ? "Eligible now" : "Not eligible yet"}
+                </span>
+              )}
             </div>
-            <div className="eligibility-row">
-              <div className={`eligibility-icon ${eligibility && !eligibility.isEligible ? "eligibility-icon-not-eligible" : ""}`}>
-                {eligibility && !eligibility.isEligible ? <ClockIcon /> : <CheckIcon />}
-              </div>
-              <div>
-                <strong>
-                  {eligibility
-                    ? (eligibility.isEligible ? "You can donate blood" : "Please wait before donating")
-                    : "Check your donation eligibility"}
-                </strong>
-                <p>
-                  {eligibility
-                    ? (eligibility.isEligible
-                      ? (eligibility.lastDonatedDate
-                        ? `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. You can donate again.`
-                        : "No previous donation is recorded. You can donate blood.")
-                      : `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. At least 3 months should pass between donations.`)
-                    : "Review your latest donation date from our records."}
+            {eligibility ? (
+              <>
+                <div className="eligibility-row">
+                  <div className={`eligibility-icon ${!eligibility.isEligible ? "eligibility-icon-not-eligible" : ""}`}>
+                    {!eligibility.isEligible ? <ClockIcon /> : <CheckIcon />}
+                  </div>
+                  <div>
+                    <strong>{eligibility.isEligible ? "You can donate blood" : "Please wait before donating"}</strong>
+                    <p>
+                      {eligibility.isEligible
+                        ? (eligibility.lastDonatedDate
+                          ? `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. You can donate again.`
+                          : "No previous donation is recorded. You can donate blood.")
+                        : `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. At least 3 months should pass between donations.`}
+                    </p>
+                  </div>
+                </div>
+                <div className="progress-track"><span /></div>
+                <p className={`progress-caption ${!eligibility.isEligible ? "progress-caption-not-eligible" : ""}`}>
+                  {eligibilityError || (eligibility.isEligible
+                    ? "Ready to help someone in need"
+                    : "Your eligibility will update after the waiting period")}
                 </p>
+              </>
+            ) : (
+              <div className="eligibility-row eligibility-row-unchecked">
+                <div className="eligibility-icon eligibility-icon-unchecked"><ClockIcon /></div>
+                <div>
+                    <strong>{isCheckingEligibility ? "Checking your eligibility..." : "Please check your eligibility"}</strong>
+                    <p>
+                      {isCheckingEligibility
+                        ? "Please wait while we check your latest donation from the database."
+                        : "Check your eligibility before donating blood."}
+                    </p>
+                </div>
               </div>
-            </div>
-            <div className="progress-track"><span /></div>
-            <p className={`progress-caption ${eligibility && !eligibility.isEligible ? "progress-caption-not-eligible" : ""}`}>
-              {eligibilityError || (eligibility
-                ? (eligibility.isEligible ? "Ready to help someone in need" : "Your eligibility will update after the waiting period")
-                : "Click below to check now")}
-            </p>
-            <button className="eligibility-button" disabled={isCheckingEligibility} onClick={handleCheckEligibility} type="button">
-              {isCheckingEligibility ? <><span className="eligibility-spinner" /> Checking...</> : "Check eligibility"}
-            </button>
-            <button className="donation-button" onClick={() => { setDonationError(""); setShowDonationForm(true); }} type="button">
-              Mark as donation
-            </button>
+            )}
+            {!eligibility && !isCheckingEligibility && (
+              <button className="eligibility-button" onClick={handleCheckEligibility} type="button">
+                Check eligibility
+              </button>
+            )}
+            {isCheckingEligibility && (
+              <p className="progress-caption"><span className="eligibility-spinner" /> Checking eligibility...</p>
+            )}
+            {eligibilityError && <p className="progress-caption progress-caption-not-eligible" role="alert">{eligibilityError}</p>}
+            {eligibility && (
+              <button
+                className="donation-button"
+                disabled={!eligibility.isEligible}
+                onClick={() => { setDonationError(""); setShowDonationForm(true); }}
+                type="button"
+              >
+                {eligibility.isEligible ? "Mark as donation" : "Not eligible to donate"}
+              </button>
+            )}
           </section>
 
           <section className="dashboard-panel">
@@ -190,18 +272,30 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
                 <p className="panel-eyebrow">Coming soon</p>
                 <h2>Upcoming camps</h2>
               </div>
-              <button className="text-button" type="button">View all</button>
+              <button className="text-button" onClick={onOpenCamps} type="button">View all</button>
             </div>
-            <div className="camp-item">
-              <div className="camp-date"><strong>24</strong><span>JUN</span></div>
-              <div><strong>University of Ruhuna</strong><p>8:30 AM · Faculty of Technology</p></div>
-              <ArrowIcon />
-            </div>
-            <div className="camp-item">
-              <div className="camp-date"><strong>02</strong><span>JUL</span></div>
-              <div><strong>Matara General Hospital</strong><p>9:00 AM · Blood bank unit</p></div>
-              <ArrowIcon />
-            </div>
+            {campsError && <p className="camp-item-message" role="alert">{campsError}</p>}
+            {!campsError && upcomingCamps.length === 0 && (
+              <p className="camp-item-message">No upcoming donation camps available.</p>
+            )}
+            {upcomingCamps.map((camp) => (
+              <button
+                className="camp-item"
+                key={camp.id}
+                onClick={() => setSelectedCamp(camp)}
+                type="button"
+              >
+                <div className="camp-date">
+                  <strong>{formatCampDay(camp.camp_date)}</strong>
+                  <span>{formatCampMonth(camp.camp_date)}</span>
+                </div>
+                <div>
+                  <strong>{camp.name}</strong>
+                  <p>{formatCampTime(camp.start_time)} · {camp.city}</p>
+                </div>
+                <ArrowIcon />
+              </button>
+            ))}
           </section>
         </div>
 
@@ -229,7 +323,60 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
           success={donationSuccess}
         />
       )}
+      {selectedCamp && (
+        <CampDetailsModal
+          camp={selectedCamp}
+          onClose={() => setSelectedCamp(null)}
+        />
+      )}
     </main>
+  );
+}
+
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 21) return "Good evening";
+  return "Good night";
+}
+
+function CampDetailsModal({ camp, onClose }) {
+  return (
+    <div className="donation-modal-overlay" onMouseDown={onClose}>
+      <section
+        aria-labelledby="camp-details-title"
+        aria-modal="true"
+        className="donation-modal camp-details-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <button
+          aria-label="Close camp details"
+          className="donation-modal-close"
+          onClick={onClose}
+          type="button"
+        >
+          ×
+        </button>
+        <p className="dashboard-eyebrow">Upcoming donation camp</p>
+        <h2 id="camp-details-title">{camp.name}</h2>
+        <p className="donation-modal-description">
+          {camp.description || "Join this camp and help save lives in your community."}
+        </p>
+        <dl className="camp-details-list">
+          <div><dt>Organizer</dt><dd>{camp.organizer || "Not available"}</dd></div>
+          <div><dt>Date</dt><dd>{formatCampFullDate(camp.camp_date)}</dd></div>
+          <div><dt>Time</dt><dd>{formatCampTime(camp.start_time)} - {formatCampTime(camp.end_time)}</dd></div>
+          <div><dt>Location</dt><dd>{camp.location}, {camp.city}</dd></div>
+          <div><dt>Contact</dt><dd>{camp.contact_number || "Not available"}</dd></div>
+        </dl>
+        <div className="donation-modal-actions">
+          <button className="donation-cancel-button" onClick={onClose} type="button">Close</button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -298,7 +445,7 @@ function formatDonationDate(dateValue) {
     return "No record";
   }
 
-  const date = new Date(`${dateValue}T00:00:00`);
+  const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) {
     return "No record";
   }
@@ -308,6 +455,37 @@ function formatDonationDate(dateValue) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function formatCampDay(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "--" : new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
+}
+
+function formatCampMonth(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "---" : new Intl.DateTimeFormat("en", { month: "short" }).format(date).toUpperCase();
+}
+
+function formatCampFullDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : new Intl.DateTimeFormat("en", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date);
+}
+
+function formatCampTime(value) {
+  if (!value) return "Time unavailable";
+  const [hours, minutes] = String(value).split(":").map(Number);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return "Time unavailable";
+  return new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(2000, 0, 1, hours, minutes));
 }
 
 function Activity({ icon, title, description, date }) {
