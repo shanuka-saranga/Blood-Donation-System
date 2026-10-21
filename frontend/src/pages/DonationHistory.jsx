@@ -26,7 +26,7 @@ function DonationHistory({
         }
 
         const response = await axios.get("http://localhost:5000/api/auth/donations", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         });
         const records = Array.isArray(response.data.donations)
           ? response.data.donations

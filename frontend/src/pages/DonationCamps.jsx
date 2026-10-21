@@ -1,41 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import "./DonationCamps.css";
 import PageTopbar from "../components/PageTopbar";
-
-const camps = [
-  {
-    id: 1,
-    name: "University of Ruhuna",
-    address: "Faculty of Technology, Hapugala",
-    date: "24 Jun 2025",
-    time: "8:30 AM - 3:00 PM",
-    coordinates: "6.0367,80.5860",
-  },
-  {
-    id: 2,
-    name: "Matara General Hospital",
-    address: "Uyanwatta, Matara",
-    date: "02 Jul 2025",
-    time: "9:00 AM - 2:00 PM",
-    coordinates: "5.9485,80.5353",
-  },
-  {
-    id: 3,
-    name: "Galle Blood Bank",
-    address: "Richmond Hill, Galle",
-    date: "08 Jul 2025",
-    time: "8:00 AM - 1:00 PM",
-    coordinates: "6.0329,80.2168",
-  },
-  {
-    id: 4,
-    name: "Teaching Hospital Karapitiya",
-    address: "Hirimbura Cross Road, Galle",
-    date: "15 Jul 2025",
-    time: "8:30 AM - 3:30 PM",
-    coordinates: "6.0498,80.2820",
-  },
-];
 
 function DonationCamps({
   user,
@@ -45,9 +11,31 @@ function DonationCamps({
   onOpenProfile,
   onLogout,
 }) {
+  const [camps, setCamps] = useState([]);
   const [search, setSearch] = useState("");
-  const [selectedCamp, setSelectedCamp] = useState(camps[0]);
+  const [selectedCamp, setSelectedCamp] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const firstName = user.name?.split(" ")[0] || "Donor";
+
+  useEffect(() => {
+    const loadCamps = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/auth/camps", {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+        });
+        const records = Array.isArray(response.data.camps) ? response.data.camps : [];
+        setCamps(records);
+        setSelectedCamp(records[0] || null);
+      } catch (requestError) {
+        setError(requestError.response?.data?.message || "Unable to load donation camps.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCamps();
+  }, []);
 
   const filteredCamps = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -55,7 +43,7 @@ function DonationCamps({
     return camps.filter((camp) =>
       `${camp.name} ${camp.address}`.toLowerCase().includes(query),
     );
-  }, [search]);
+  }, [camps, search]);
 
   const handleSearch = (event) => {
     const value = event.target.value;
@@ -68,7 +56,7 @@ function DonationCamps({
     if (nextCamp) setSelectedCamp(nextCamp);
   };
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=80.15%2C5.85%2C80.65%2C6.15&layer=mapnik&marker=${selectedCamp.coordinates}`;
+  const mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=79.85%2C5.75%2C81.0%2C9.85&layer=mapnik";
 
   return (
     <main className="camps-page">
@@ -154,21 +142,26 @@ function DonationCamps({
                 {filteredCamps.length} camps
               </span>
             </div>
-            <div className="map-frame">
+            {isLoading && <p className="empty-camps">Loading donation camps...</p>}
+            {error && <p className="empty-camps" role="alert">{error}</p>}
+            {!isLoading && !error && !selectedCamp && (
+              <p className="empty-camps">No upcoming donation camps are available.</p>
+            )}
+            {selectedCamp && <div className="map-frame">
               <iframe
                 key={selectedCamp.id}
                 title={`Map showing ${selectedCamp.name}`}
                 src={mapUrl}
               />
-            </div>
-            <a
-              className="map-link"
-              href={`https://www.openstreetmap.org/?mlat=${selectedCamp.coordinates.split(",")[0]}&mlon=${selectedCamp.coordinates.split(",")[1]}#map=14/${selectedCamp.coordinates.replace(",", "/")}`}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open selected location in maps <ArrowIcon />
-            </a>
+            </div>}
+            {selectedCamp && (
+              <div className="camp-selected-details">
+                <strong>{selectedCamp.organizer}</strong>
+                <span>{selectedCamp.location}, {selectedCamp.city}</span>
+                <span>Contact: {selectedCamp.contact_number}</span>
+                {selectedCamp.description && <small>{selectedCamp.description}</small>}
+              </div>
+            )}
           </section>
 
           <section className="camp-list-panel">
@@ -193,8 +186,9 @@ function DonationCamps({
                     <span className="camp-location-details">
                       <strong>{camp.name}</strong>
                       <span>{camp.address}</span>
+                      <small>{camp.organizer}</small>
                       <small>
-                        {camp.date} · {camp.time}
+                        {formatCampDate(camp.camp_date)} · {formatCampTime(camp.start_time)} - {formatCampTime(camp.end_time)}
                       </small>
                     </span>
                     <ArrowIcon />
@@ -211,6 +205,29 @@ function DonationCamps({
       </section>
     </main>
   );
+}
+
+function formatCampDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : new Intl.DateTimeFormat("en", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+}
+
+function formatCampTime(value) {
+  if (!value) return "Time unavailable";
+  const [hours, minutes] = String(value).split(":").map(Number);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return "Time unavailable";
+
+  const date = new Date(2000, 0, 1, hours, minutes);
+  return new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function HeartIcon() {
