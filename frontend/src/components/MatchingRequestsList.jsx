@@ -3,7 +3,7 @@ import axios from "axios";
 
 const API_BASE_URL = "http://localhost:5000/api/requests";
 
-function MatchingRequestsList() {
+function MatchingRequestsList({ onActivityChanged }) {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,6 +36,7 @@ function MatchingRequestsList() {
         headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       });
       setRequests((currentRequests) => currentRequests.filter((request) => request.id !== requestId));
+      onActivityChanged?.();
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Unable to accept this request.");
     } finally {
