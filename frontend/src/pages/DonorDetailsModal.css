@@ -10,12 +10,37 @@
 }
 
 .donor-details-modal {
+  position: relative;
   width: min(100%, 620px);
   padding: 30px;
   border: 1px solid #fecaca;
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 24px 60px rgba(15, 23, 42, .28);
+}
+
+.donor-details-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: #64748b;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.donor-details-close:hover,
+.donor-details-close:focus-visible {
+  color: #991b1b;
+  background: #fee2e2;
+  outline: none;
 }
 
 .donor-details-modal h2 { margin: 5px 0 8px; color: #0f172a; font-size: 25px; }

@@ -217,6 +217,7 @@ function App() {
         (showDonorDetailsModal || showDonorDetailsSuccess) && (
           <DonorDetailsModal
             onSave={handleDonorDetails}
+            onClose={() => setShowDonorDetailsModal(false)}
             error={donorDetailsError}
             isSaving={isSavingDonorDetails}
             showSuccess={showDonorDetailsSuccess}
@@ -226,7 +227,7 @@ function App() {
   );
 }
 
-function DonorDetailsModal({ onSave, error, isSaving, showSuccess }) {
+function DonorDetailsModal({ onSave, onClose, error, isSaving, showSuccess }) {
   const [form, setForm] = useState({
     bloodGroup: "",
     phone: "",
@@ -268,6 +269,14 @@ function DonorDetailsModal({ onSave, error, isSaving, showSuccess }) {
   return (
     <div className="donor-details-overlay">
       <form className="donor-details-modal" onSubmit={handleSubmit}>
+        <button
+          aria-label="Close donor details form"
+          className="donor-details-close"
+          onClick={onClose}
+          type="button"
+        >
+          ×
+        </button>
         <p className="dashboard-eyebrow">Complete your profile</p>
         <h2>Tell us about yourself</h2>
         <p className="donor-details-description">
