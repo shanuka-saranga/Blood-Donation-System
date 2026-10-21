@@ -12,7 +12,7 @@ function Profile({
   onBack,
   onOpenCamps,
   onOpenBloodRequest,
-  onOpenDonations,
+  onOpenDonations, onOpenMarkDonation,
   onLogout,
   darkMode,
   onToggleDarkMode,
@@ -219,6 +219,9 @@ function Profile({
           </button>
           <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
+          </button>
+          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item dashboard-nav-item-active"
@@ -596,6 +599,13 @@ function HistoryIcon() {
     />,
   );
 }
+
+function CheckIcon() {
+  return icon(
+    <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />,
+  );
+}
+
 function ProfileIcon() {
   return icon(
     <>
