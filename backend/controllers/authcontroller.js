@@ -313,6 +313,50 @@ exports.getDonationCamps = async (req, res) => {
   }
 };
 
+exports.getDonorActivity = async (req, res) => {
+  try {
+    const [donations] = await db.query(
+      `SELECT donated_date AS activity_date, hospital_name
+       FROM donation_records
+       WHERE donor_id = ?
+       ORDER BY donated_date DESC, id DESC
+       LIMIT 5`,
+      [req.user.id],
+    );
+    const [acceptedRequests] = await db.query(
+      `SELECT accepted_at AS activity_date, hospital_name, blood_group
+       FROM blood_requests
+       WHERE accepted_by = ? AND accepted_at IS NOT NULL
+       ORDER BY accepted_at DESC
+       LIMIT 5`,
+      [req.user.id],
+    );
+    const activities = [
+      ...donations.map((item) => ({
+        type: "donation",
+        title: "Donation completed",
+        description: `Your donation at ${item.hospital_name} was recorded successfully.`,
+        date: item.activity_date,
+      })),
+      ...acceptedRequests.map((item) => ({
+        type: "request",
+        title: "Blood request accepted",
+        description: `You accepted a ${item.blood_group} blood request for ${item.hospital_name}.`,
+        date: item.activity_date,
+      })),
+    ]
+      .sort((first, second) => new Date(second.date) - new Date(first.date))
+      .slice(0, 5);
+
+    return res.status(200).json({ activities });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Unable to load recent activity.",
+      error: error.message,
+    });
+  }
+};
+
 exports.updateProfile = async (req, res) => {
   const { name, email, phone, bloodGroup, location, profilePicture } = req.body;
 

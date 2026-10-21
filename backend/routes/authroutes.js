@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, updateProfile, updateDonorDetails, changePassword, checkEligibility, markDonation, getDonations, getLatestDonation, getDonationCamps } = require("../controllers/authcontroller");
+const { register, login, updateProfile, updateDonorDetails, changePassword, checkEligibility, markDonation, getDonations, getLatestDonation, getDonationCamps, getDonorActivity } = require("../controllers/authcontroller");
 const authenticate = require("../middleware/authenticate");
 
 router.post("/register", register);
@@ -13,5 +13,6 @@ router.post("/donations", authenticate, markDonation);
 router.get("/donations", authenticate, getDonations);
 router.get("/donations/latest", authenticate, getLatestDonation);
 router.get("/camps", authenticate, getDonationCamps);
+router.get("/activity", authenticate, getDonorActivity);
 
 module.exports = router;
