@@ -9,6 +9,7 @@ function DonationHistory({
   onOpenCamps,
   onOpenBloodRequest,
   onOpenProfile,
+  onOpenMarkDonation,
   onLogout,
 }) {
   const [donations, setDonations] = useState([]);
@@ -70,6 +71,9 @@ function DonationHistory({
           </button>
           <button className="dashboard-nav-item dashboard-nav-item-active" type="button">
             <HistoryIcon /> My donations
+          </button>
+          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+            <CheckIcon /> Mark as donated
           </button>
           <button className="dashboard-nav-item" onClick={onOpenProfile} type="button">
             <ProfileIcon /> My profile
@@ -211,6 +215,10 @@ function CalendarIcon() {
 
 function HistoryIcon() {
   return <Icon><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5m4-1v5l3 2" /></Icon>;
+}
+
+function CheckIcon() {
+  return <Icon><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" /></Icon>;
 }
 
 function ProfileIcon() {
