@@ -31,12 +31,11 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
     setMessage("");
     setError("");
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.post(
         "http://localhost:5000/api/requests",
         form,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         },
       );
       setMessage(response.data.message);
