@@ -105,7 +105,7 @@ function Profile({
         `${API_URL}/profile`,
         { ...form, profilePicture },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         },
       );
       const updatedUser = response.data.user;
@@ -115,8 +115,7 @@ function Profile({
           donorDetails,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
+              Authorization: "Bearer " + localStorage.getItem("token") },
           },
         );
         updatedUser.donorDetails = donorResponse.data.donorDetails;
@@ -172,7 +171,7 @@ function Profile({
           newPassword: passwordForm.newPassword,
         },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         },
       );
       setPasswordForm({
