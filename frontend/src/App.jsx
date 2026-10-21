@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import BloodRequest from "./pages/BloodRequest";
 import DonationHistory from "./pages/DonationHistory";
 import MarkDonation from "./pages/MarkDonation";
+import AdminDashboard from "./pages/AdminDashboard";
 import "./pages/DonorDetailsModal.css";
 
 function App() {
@@ -105,6 +106,10 @@ function App() {
         }}
       />
     );
+  }
+
+  if (user.role === "admin") {
+    return <AdminDashboard user={user} onLogout={handleLogout} />;
   }
 
   if (page === "camps") {
