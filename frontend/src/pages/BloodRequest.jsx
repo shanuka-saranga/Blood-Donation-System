@@ -14,7 +14,7 @@ const initialForm = {
   requiredDate: "",
 };
 
-function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfile, onLogout }) {
+function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfile, onOpenMarkDonation, onLogout }) {
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -78,6 +78,9 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
           </button>
           <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
+          </button>
+          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item"
@@ -291,6 +294,15 @@ function HistoryIcon() {
     </Icon>
   );
 }
+
+function CheckIcon() {
+  return (
+    <Icon>
+      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+    </Icon>
+  );
+}
+
 function ProfileIcon() {
   return (
     <Icon>
