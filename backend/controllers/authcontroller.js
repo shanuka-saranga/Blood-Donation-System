@@ -231,6 +231,26 @@ exports.markDonation = async (req, res) => {
   }
 };
 
+exports.getDonations = async (req, res) => {
+  try {
+    const [donations] = await db.query(
+      `SELECT id, donor_id, request_id, donated_date, units_donated,
+              hospital_name, status, created_at, updated_at
+       FROM donation_records
+       WHERE donor_id = ?
+       ORDER BY donated_date DESC, id DESC`,
+      [req.user.id],
+    );
+
+    return res.status(200).json({ donations });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Unable to load donation history.",
+      error: error.message,
+    });
+  }
+};
+
 exports.updateProfile = async (req, res) => {
   const { name, email, phone, bloodGroup, location, profilePicture } = req.body;
 
