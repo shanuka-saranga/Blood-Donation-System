@@ -357,6 +357,132 @@ exports.getDonorActivity = async (req, res) => {
   }
 };
 
+exports.getAdminSummary = async (req, res) => {
+  try {
+    const [[users], [donations], [requests], [camps], [eligibleDonors], [userList], [donorList], [eligibleDonorList], [requestList], [campList], [recentDonations]] = await Promise.all([
+      db.query("SELECT COUNT(*) AS total, SUM(role = 'donor') AS donors FROM users"),
+      db.query("SELECT COUNT(*) AS total FROM donation_records"),
+      db.query("SELECT SUM(LOWER(status) IN ('pending', 'open', 'active')) AS active, SUM(LOWER(status) = 'accepted') AS accepted FROM blood_requests"),
+      db.query("SELECT COUNT(*) AS total FROM donation_camps WHERE camp_date >= CURDATE()"),
+      db.query("SELECT COUNT(*) AS total FROM donor_details WHERE is_eligible = TRUE"),
+      db.query("SELECT id, name, email, role FROM users ORDER BY name ASC"),
+      db.query(
+        `SELECT users.id, users.name, users.email, donor_details.blood_group, donor_details.city
+         FROM users INNER JOIN donor_details ON donor_details.user_id = users.id
+         WHERE users.role = 'donor' ORDER BY users.name ASC`,
+      ),
+      db.query(
+        `SELECT users.id, users.name, users.email, donor_details.blood_group, donor_details.city
+         FROM users INNER JOIN donor_details ON donor_details.user_id = users.id
+         WHERE users.role = 'donor' AND donor_details.is_eligible = TRUE
+         ORDER BY users.name ASC`,
+      ),
+      db.query(
+        `SELECT id, patient_name, blood_group, hospital_name, city, units_required, urgency, status, required_date
+         FROM blood_requests
+         WHERE LOWER(status) IN ('pending', 'open', 'active')
+         ORDER BY required_date ASC, created_at DESC`,
+      ),
+      db.query(
+        `SELECT id, title, organizer, location, city, camp_date, start_time, end_time
+         FROM donation_camps WHERE camp_date >= CURDATE()
+         ORDER BY camp_date ASC, start_time ASC, id ASC`,
+      ),
+      db.query(
+        `SELECT donations.id, donations.donated_date, donations.units_donated,
+                donations.hospital_name, donations.status, users.name AS donor_name
+         FROM donation_records AS donations
+         INNER JOIN users ON users.id = donations.donor_id
+         ORDER BY donations.donated_date DESC, donations.id DESC
+         LIMIT 8`,
+      ),
+    ]);
+
+    return res.status(200).json({
+      stats: {
+        users: Number(users[0]?.total || 0),
+        donors: Number(users[0]?.donors || 0),
+        donations: Number(donations[0]?.total || 0),
+        activeRequests: Number(requests[0]?.active || 0),
+        acceptedRequests: Number(requests[0]?.accepted || 0),
+        upcomingCamps: Number(camps[0]?.total || 0),
+        eligibleDonors: Number(eligibleDonors[0]?.total || 0),
+      },
+      users: userList,
+      donors: donorList,
+      eligibleDonors: eligibleDonorList,
+      activeRequests: requestList,
+      upcomingCamps: campList,
+      recentDonations,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Unable to load admin dashboard data.",
+      error: error.message,
+    });
+  }
+};
+
+exports.createDonationCamp = async (req, res) => {
+  const {
+    title, organizer, location, city, campDate, startTime, endTime,
+    contactNumber, description,
+  } = req.body;
+
+  if (
+    !title?.trim() || !organizer?.trim() || !location?.trim() || !city?.trim()
+    || !campDate || !startTime || !endTime || !contactNumber?.trim()
+  ) {
+    return res.status(400).json({ message: "Please complete all donation camp details." });
+  }
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO donation_camps
+        (created_by, title, organizer, location, city, camp_date, start_time,
+         end_time, contact_number, description)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.id, title.trim(), organizer.trim(), location.trim(), city.trim(),
+        campDate, startTime, endTime, contactNumber.trim(), description?.trim() || null,
+      ],
+    );
+
+    return res.status(201).json({ message: "Donation camp added successfully.", campId: result.insertId });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to add donation camp.", error: error.message });
+  }
+};
+
+exports.updateAdminUser = async (req, res) => {
+  const { name, email, role } = req.body;
+  if (!name?.trim() || !email?.trim() || !["donor", "admin"].includes(role)) {
+    return res.status(400).json({ message: "Name, email, and a valid role are required." });
+  }
+  try {
+    await db.query(
+      "UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?",
+      [name.trim(), email.trim(), role, req.params.userId],
+    );
+    return res.status(200).json({ message: "User updated successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to update user.", error: error.message });
+  }
+};
+
+exports.deleteAdminUser = async (req, res) => {
+  if (Number(req.params.userId) === Number(req.user.id)) {
+    return res.status(400).json({ message: "You cannot delete your own admin account." });
+  }
+  try {
+    const [result] = await db.query("DELETE FROM users WHERE id = ?", [req.params.userId]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: "User not found." });
+    return res.status(200).json({ message: "User deleted successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to delete user.", error: error.message });
+  }
+};
+
 exports.updateProfile = async (req, res) => {
   const { name, email, phone, bloodGroup, location, profilePicture } = req.body;
 
