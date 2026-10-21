@@ -9,6 +9,7 @@ function DonationCamps({
   onOpenBloodRequest,
   onOpenDonations,
   onOpenProfile,
+  onOpenMarkDonation,
   onLogout,
 }) {
   const [camps, setCamps] = useState([]);
@@ -87,6 +88,9 @@ function DonationCamps({
           </button>
           <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
             <HistoryIcon /> My donations
+          </button>
+          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item"
@@ -349,6 +353,14 @@ function HistoryIcon() {
         strokeLinejoin="round"
         strokeWidth="2"
       />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg className="dashboard-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
     </svg>
   );
 }
