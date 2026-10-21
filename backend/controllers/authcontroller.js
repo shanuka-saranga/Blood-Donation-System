@@ -153,23 +153,42 @@ exports.updateDonorDetails = async (req, res) => {
 exports.checkEligibility = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT last_donated_date,
-              (last_donated_date IS NULL OR DATE_ADD(last_donated_date, INTERVAL 3 MONTH) <= CURDATE()) AS is_eligible
-       FROM donor_details
-       WHERE user_id = ?`,
+      `SELECT MAX(donated_date) AS last_donated_date
+       FROM donation_records
+       WHERE donor_id = ?`,
       [req.user.id],
     );
 
-    if (rows.length === 0) {
+    const [donorDetails] = await db.query(
+      "SELECT user_id FROM donor_details WHERE user_id = ?",
+      [req.user.id],
+    );
+    if (donorDetails.length === 0) {
       return res.status(404).json({ message: "Complete your donor details before checking eligibility." });
     }
 
-    const eligibility = Boolean(rows[0].is_eligible);
+    const lastDonatedDate = rows[0]?.last_donated_date || null;
+    if (!lastDonatedDate) {
+      await db.query(
+        "UPDATE donor_details SET is_eligible = TRUE WHERE user_id = ?",
+        [req.user.id],
+      );
+
+      return res.status(200).json({
+        isEligible: true,
+        lastDonatedDate: "",
+        message: "You can donate blood.",
+      });
+    }
+
+    const eligibility = new Date(lastDonatedDate) <= new Date(
+      new Date().setMonth(new Date().getMonth() - 3),
+    );
     await db.query("UPDATE donor_details SET is_eligible = ? WHERE user_id = ?", [eligibility, req.user.id]);
 
     return res.status(200).json({
       isEligible: eligibility,
-      lastDonatedDate: rows[0].last_donated_date || "",
+      lastDonatedDate,
       message: eligibility
         ? "You can donate blood."
         : "You are not eligible to donate yet.",
@@ -246,6 +265,49 @@ exports.getDonations = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       message: "Unable to load donation history.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getLatestDonation = async (req, res) => {
+  try {
+    const [donations] = await db.query(
+      `SELECT donated_date
+       FROM donation_records
+       WHERE donor_id = ?
+       ORDER BY donated_date DESC, id DESC
+       LIMIT 1`,
+      [req.user.id],
+    );
+
+    return res.status(200).json({
+      lastDonatedDate: donations[0]?.donated_date || "",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Unable to load the last donation date.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getDonationCamps = async (req, res) => {
+  try {
+    const [camps] = await db.query(
+      `SELECT id, title AS name, organizer, location,
+              CONCAT(location, ', ', city) AS address,
+              city, camp_date, start_time, end_time,
+              contact_number, description
+       FROM donation_camps
+       WHERE camp_date >= CURDATE()
+       ORDER BY camp_date ASC, start_time ASC, id ASC`,
+    );
+
+    return res.status(200).json({ camps });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Unable to load donation camps.",
       error: error.message,
     });
   }

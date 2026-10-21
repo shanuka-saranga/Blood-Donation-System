@@ -85,6 +85,28 @@ const ensureDonationRecordsTable = async () => {
   `);
 };
 
+const ensureDonationCampsTable = async () => {
+  await promisePool.query(`
+    CREATE TABLE IF NOT EXISTS donation_camps (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      created_by INT NULL,
+      title VARCHAR(150) NOT NULL,
+      organizer VARCHAR(150) NOT NULL,
+      location VARCHAR(255) NOT NULL,
+      city VARCHAR(100) NOT NULL,
+      camp_date DATE NOT NULL,
+      start_time TIME NOT NULL,
+      end_time TIME NOT NULL,
+      contact_number VARCHAR(30) NOT NULL,
+      description TEXT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT fk_donation_camps_creator
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+};
+
 const ensureBloodRequestsTable = async () => {
   await promisePool.query(`
     CREATE TABLE IF NOT EXISTS blood_requests (
@@ -142,6 +164,7 @@ promisePool.testConnection = testConnection;
 promisePool.ensureProfileColumns = ensureProfileColumns;
 promisePool.ensureDonorDetailsTable = ensureDonorDetailsTable;
 promisePool.ensureDonationRecordsTable = ensureDonationRecordsTable;
+promisePool.ensureDonationCampsTable = ensureDonationCampsTable;
 promisePool.ensureBloodRequestsTable = ensureBloodRequestsTable;
 
 module.exports = promisePool;
