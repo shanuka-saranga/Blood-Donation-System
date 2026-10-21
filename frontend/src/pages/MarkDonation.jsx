@@ -40,7 +40,12 @@ function MarkDonation({
         headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       });
       localStorage.setItem(`lastDonation:${user.id}`, form.donatedDate);
-      onDonationRecorded(form.donatedDate);
+      onDonationRecorded({
+        type: "donation",
+        title: "Donation completed",
+        description: `Your donation at ${form.hospitalName.trim()} was recorded successfully.`,
+        date: form.donatedDate,
+      });
       setShowSuccess(true);
       window.setTimeout(onBack, 2400);
     } catch (requestError) {

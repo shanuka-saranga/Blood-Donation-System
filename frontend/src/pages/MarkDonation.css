@@ -1,6 +1,7 @@
 .mark-donation-page {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   color: #1e293b;
   background: #fff7f7;
 }
@@ -8,6 +9,8 @@
 .mark-donation-content {
   width: 100%;
   min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
   padding: 32px 42px;
   box-sizing: border-box;
 }
@@ -123,7 +126,8 @@
 .mark-donation-success p:last-child { margin: 0; color: #64748b; }
 
 @media (max-width: 720px) {
-  .mark-donation-content { padding: 24px 18px; }
+  .mark-donation-page { display: block; height: auto; overflow: visible; }
+  .mark-donation-content { height: auto; overflow: visible; padding: 24px 18px; }
   .mark-donation-form-grid { grid-template-columns: 1fr; }
   .mark-donation-wide { grid-column: auto; }
 }
