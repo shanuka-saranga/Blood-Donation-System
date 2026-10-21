@@ -29,6 +29,7 @@ const startServer = async () => {
     await db.ensureProfileColumns();
     await db.ensureDonorDetailsTable();
     await db.ensureDonationRecordsTable();
+    await db.ensureDonationCampsTable();
     await db.ensureBloodRequestsTable();
 
     app.listen(PORT, () => {
