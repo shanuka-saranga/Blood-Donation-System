@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import Login from "./pages/Login";
 import AppContent from "./components/AppContent";
@@ -18,6 +19,7 @@ function App() {
       return null;
     }
   });
+
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("darkMode") === "true",
   );
@@ -31,8 +33,7 @@ function App() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
-    setPage("dashboard");
-  };
+  }, []);
 
   return (
     <BrowserRouter>
@@ -41,7 +42,10 @@ function App() {
           path="/login"
           element={
             user ? (
-              <Navigate replace to={user.role === "admin" ? "/admin" : "/dashboard"} />
+              <Navigate
+                replace
+                to={user.role === "admin" ? "/admin" : "/dashboard"}
+              />
             ) : (
               <Login
                 onLoginSuccess={(loggedInUser) => {
