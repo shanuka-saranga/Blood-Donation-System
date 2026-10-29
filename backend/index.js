@@ -13,7 +13,7 @@ app.use(helmet());
 
 // 2. Restricted CORS Middleware (Frontend URL එකට පමණක් Access ලබාදීමට)
 const allowedOrigins = [
-  "https://blood-donation-system.vercel.app", // ඔයාගේ Live Frontend URL එක මෙතනට දාන්න
+  "https://blood-care-sl.vercel.app", // ඔයාගේ Live Frontend URL එක මෙතනට දාන්න
   "http://localhost:5173",                     // Local React App එක සඳහා
   "http://localhost:3000",
 ];
