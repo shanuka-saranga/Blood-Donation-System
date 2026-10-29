@@ -22,14 +22,19 @@ function DonationCamps({
   useEffect(() => {
     const loadCamps = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/auth/camps", {
+        const response = await axios.get("/api/auth/camps", {
           headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         });
-        const records = Array.isArray(response.data.camps) ? response.data.camps : [];
+        const records = Array.isArray(response.data.camps)
+          ? response.data.camps
+          : [];
         setCamps(records);
         setSelectedCamp(records[0] || null);
       } catch (requestError) {
-        setError(requestError.response?.data?.message || "Unable to load donation camps.");
+        setError(
+          requestError.response?.data?.message ||
+            "Unable to load donation camps.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -57,7 +62,8 @@ function DonationCamps({
     if (nextCamp) setSelectedCamp(nextCamp);
   };
 
-  const mapUrl = "https://www.openstreetmap.org/export/embed.html?bbox=79.85%2C5.75%2C81.0%2C9.85&layer=mapnik";
+  const mapUrl =
+    "https://www.openstreetmap.org/export/embed.html?bbox=79.85%2C5.75%2C81.0%2C9.85&layer=mapnik";
 
   return (
     <main className="camps-page">
@@ -86,10 +92,18 @@ function DonationCamps({
           >
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
+          <button
+            className="dashboard-nav-item"
+            onClick={onOpenDonations}
+            type="button"
+          >
             <HistoryIcon /> My donations
           </button>
-          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+          <button
+            className="dashboard-nav-item"
+            onClick={onOpenMarkDonation}
+            type="button"
+          >
             <CheckIcon /> Mark as donated
           </button>
           <button
@@ -146,24 +160,38 @@ function DonationCamps({
                 {filteredCamps.length} camps
               </span>
             </div>
-            {isLoading && <p className="empty-camps">Loading donation camps...</p>}
-            {error && <p className="empty-camps" role="alert">{error}</p>}
-            {!isLoading && !error && !selectedCamp && (
-              <p className="empty-camps">No upcoming donation camps are available.</p>
+            {isLoading && (
+              <p className="empty-camps">Loading donation camps...</p>
             )}
-            {selectedCamp && <div className="map-frame">
-              <iframe
-                key={selectedCamp.id}
-                title={`Map showing ${selectedCamp.name}`}
-                src={mapUrl}
-              />
-            </div>}
+            {error && (
+              <p className="empty-camps" role="alert">
+                {error}
+              </p>
+            )}
+            {!isLoading && !error && !selectedCamp && (
+              <p className="empty-camps">
+                No upcoming donation camps are available.
+              </p>
+            )}
+            {selectedCamp && (
+              <div className="map-frame">
+                <iframe
+                  key={selectedCamp.id}
+                  title={`Map showing ${selectedCamp.name}`}
+                  src={mapUrl}
+                />
+              </div>
+            )}
             {selectedCamp && (
               <div className="camp-selected-details">
                 <strong>{selectedCamp.organizer}</strong>
-                <span>{selectedCamp.location}, {selectedCamp.city}</span>
+                <span>
+                  {selectedCamp.location}, {selectedCamp.city}
+                </span>
                 <span>Contact: {selectedCamp.contact_number}</span>
-                {selectedCamp.description && <small>{selectedCamp.description}</small>}
+                {selectedCamp.description && (
+                  <small>{selectedCamp.description}</small>
+                )}
               </div>
             )}
           </section>
@@ -192,7 +220,9 @@ function DonationCamps({
                       <span>{camp.address}</span>
                       <small>{camp.organizer}</small>
                       <small>
-                        {formatCampDate(camp.camp_date)} · {formatCampTime(camp.start_time)} - {formatCampTime(camp.end_time)}
+                        {formatCampDate(camp.camp_date)} ·{" "}
+                        {formatCampTime(camp.start_time)} -{" "}
+                        {formatCampTime(camp.end_time)}
                       </small>
                     </span>
                     <ArrowIcon />
@@ -216,16 +246,17 @@ function formatCampDate(value) {
   return Number.isNaN(date.getTime())
     ? "Date unavailable"
     : new Intl.DateTimeFormat("en", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(date);
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date);
 }
 
 function formatCampTime(value) {
   if (!value) return "Time unavailable";
   const [hours, minutes] = String(value).split(":").map(Number);
-  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return "Time unavailable";
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes))
+    return "Time unavailable";
 
   const date = new Date(2000, 0, 1, hours, minutes);
   return new Intl.DateTimeFormat("en", {
@@ -359,8 +390,18 @@ function HistoryIcon() {
 
 function CheckIcon() {
   return (
-    <svg className="dashboard-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+    <svg
+      className="dashboard-icon"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="m5 12 4 4L19 6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.5"
+      />
     </svg>
   );
 }

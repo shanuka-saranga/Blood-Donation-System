@@ -10,7 +10,13 @@ import MarkDonation from "../pages/MarkDonation";
 import Profile from "../pages/Profile";
 import DonorDetailsModal from "./DonorDetailsModal";
 
-function AppContent({ user, onLogout, darkMode, onToggleDarkMode, onUserUpdate }) {
+function AppContent({
+  user,
+  onLogout,
+  darkMode,
+  onToggleDarkMode,
+  onUserUpdate,
+}) {
   const navigate = useNavigate();
   const [latestDonationDate, setLatestDonationDate] = useState("");
   const [latestActivity, setLatestActivity] = useState(null);
@@ -36,11 +42,9 @@ function AppContent({ user, onLogout, darkMode, onToggleDarkMode, onUserUpdate }
     setIsSavingDonorDetails(true);
     setDonorDetailsError("");
     try {
-      const response = await axios.put(
-        "http://localhost:5000/api/auth/donor-details",
-        details,
-        { headers: { Authorization: "Bearer " + localStorage.getItem("token") } },
-      );
+      const response = await axios.put("/api/auth/donor-details", details, {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      });
       const updatedUser = {
         ...user,
         donorDetails: response.data.donorDetails,
@@ -56,7 +60,8 @@ function AppContent({ user, onLogout, darkMode, onToggleDarkMode, onUserUpdate }
       return true;
     } catch (error) {
       setDonorDetailsError(
-        error.response?.data?.message || "Unable to save donor details. Please try again.",
+        error.response?.data?.message ||
+          "Unable to save donor details. Please try again.",
       );
       return false;
     } finally {
@@ -67,7 +72,10 @@ function AppContent({ user, onLogout, darkMode, onToggleDarkMode, onUserUpdate }
   if (user.role === "admin") {
     return (
       <Routes>
-        <Route path="/admin" element={<AdminDashboard user={user} onLogout={onLogout} />} />
+        <Route
+          path="/admin"
+          element={<AdminDashboard user={user} onLogout={onLogout} />}
+        />
         <Route path="*" element={<Navigate replace to="/admin" />} />
       </Routes>
     );
@@ -87,9 +95,18 @@ function AppContent({ user, onLogout, darkMode, onToggleDarkMode, onUserUpdate }
             />
           }
         />
-        <Route path="/camps" element={<DonationCamps {...donorNavigation} user={user} />} />
-        <Route path="/request-blood" element={<BloodRequest {...donorNavigation} user={user} />} />
-        <Route path="/donations" element={<DonationHistory {...donorNavigation} user={user} />} />
+        <Route
+          path="/camps"
+          element={<DonationCamps {...donorNavigation} user={user} />}
+        />
+        <Route
+          path="/request-blood"
+          element={<BloodRequest {...donorNavigation} user={user} />}
+        />
+        <Route
+          path="/donations"
+          element={<DonationHistory {...donorNavigation} user={user} />}
+        />
         <Route
           path="/mark-donation"
           element={

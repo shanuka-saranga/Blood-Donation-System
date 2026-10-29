@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api/requests";
+const API_BASE_URL = "/api/requests";
 
 function MatchingRequestsList({ onActivityChanged }) {
   const [requests, setRequests] = useState([]);
@@ -18,7 +18,10 @@ function MatchingRequestsList({ onActivityChanged }) {
         const matchingRequests = response.data.requests || response.data;
         setRequests(Array.isArray(matchingRequests) ? matchingRequests : []);
       } catch (requestError) {
-        setError(requestError.response?.data?.message || "Unable to load matching requests.");
+        setError(
+          requestError.response?.data?.message ||
+            "Unable to load matching requests.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -32,13 +35,22 @@ function MatchingRequestsList({ onActivityChanged }) {
     setError("");
 
     try {
-      await axios.post(`${API_BASE_URL}/${requestId}/accept`, {}, {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-      });
-      setRequests((currentRequests) => currentRequests.filter((request) => request.id !== requestId));
+      await axios.post(
+        `${API_BASE_URL}/${requestId}/accept`,
+        {},
+        {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+        },
+      );
+      setRequests((currentRequests) =>
+        currentRequests.filter((request) => request.id !== requestId),
+      );
       onActivityChanged?.();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Unable to accept this request.");
+      setError(
+        requestError.response?.data?.message ||
+          "Unable to accept this request.",
+      );
     } finally {
       setAcceptingRequestId(null);
     }
@@ -46,14 +58,19 @@ function MatchingRequestsList({ onActivityChanged }) {
 
   if (isLoading) {
     return (
-      <section className="matching-requests-panel dashboard-panel" aria-busy="true">
+      <section
+        className="matching-requests-panel dashboard-panel"
+        aria-busy="true"
+      >
         <div className="panel-heading">
           <div>
             <p className="panel-eyebrow">Help nearby</p>
             <h2>Matching requests</h2>
           </div>
         </div>
-        <p className="matching-requests-message">Loading matching requests...</p>
+        <p className="matching-requests-message">
+          Loading matching requests...
+        </p>
       </section>
     );
   }
@@ -67,9 +84,15 @@ function MatchingRequestsList({ onActivityChanged }) {
         </div>
         <span className="matching-requests-count">{requests.length}</span>
       </div>
-      {error && <p className="matching-requests-error" role="alert">{error}</p>}
+      {error && (
+        <p className="matching-requests-error" role="alert">
+          {error}
+        </p>
+      )}
       {requests.length === 0 ? (
-        <p className="matching-requests-message">There are no matching blood requests right now.</p>
+        <p className="matching-requests-message">
+          There are no matching blood requests right now.
+        </p>
       ) : (
         <div className="matching-requests-list">
           {requests.map((request) => {
@@ -78,14 +101,27 @@ function MatchingRequestsList({ onActivityChanged }) {
             return (
               <article className="matching-request-card" key={requestId}>
                 <div className="matching-request-card-header">
-                  <span className={`matching-request-urgency matching-request-urgency-${urgency.toLowerCase()}`}>
+                  <span
+                    className={`matching-request-urgency matching-request-urgency-${urgency.toLowerCase()}`}
+                  >
                     {urgency}
                   </span>
-                  <span className="matching-request-blood-group">{request.blood_group || request.bloodGroup || "Blood needed"}</span>
+                  <span className="matching-request-blood-group">
+                    {request.blood_group ||
+                      request.bloodGroup ||
+                      "Blood needed"}
+                  </span>
                 </div>
-                <h3>{request.hospital_name || request.hospitalName || "Hospital not provided"}</h3>
+                <h3>
+                  {request.hospital_name ||
+                    request.hospitalName ||
+                    "Hospital not provided"}
+                </h3>
                 <p className="matching-request-units">
-                  <strong>{request.units_required || request.unitsRequired || 0}</strong> units required
+                  <strong>
+                    {request.units_required || request.unitsRequired || 0}
+                  </strong>{" "}
+                  units required
                 </p>
                 <button
                   className="matching-request-accept"
@@ -93,7 +129,9 @@ function MatchingRequestsList({ onActivityChanged }) {
                   onClick={() => handleAcceptRequest(requestId)}
                   type="button"
                 >
-                  {acceptingRequestId === requestId ? "Accepting..." : "Accept Request"}
+                  {acceptingRequestId === requestId
+                    ? "Accepting..."
+                    : "Accept Request"}
                 </button>
               </article>
             );

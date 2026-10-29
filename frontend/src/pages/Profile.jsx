@@ -4,7 +4,7 @@ import "./Profile.css";
 import "./DonorDetailsModal.css";
 import PageTopbar from "../components/PageTopbar";
 
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = "/api/auth";
 
 function Profile({
   user,
@@ -12,7 +12,8 @@ function Profile({
   onBack,
   onOpenCamps,
   onOpenBloodRequest,
-  onOpenDonations, onOpenMarkDonation,
+  onOpenDonations,
+  onOpenMarkDonation,
   onLogout,
   darkMode,
   onToggleDarkMode,
@@ -115,7 +116,8 @@ function Profile({
           donorDetails,
           {
             headers: {
-              Authorization: "Bearer " + localStorage.getItem("token") },
+              Authorization: "Bearer " + localStorage.getItem("token"),
+            },
           },
         );
         updatedUser.donorDetails = donorResponse.data.donorDetails;
@@ -217,10 +219,18 @@ function Profile({
           >
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
+          <button
+            className="dashboard-nav-item"
+            onClick={onOpenDonations}
+            type="button"
+          >
             <HistoryIcon /> My donations
           </button>
-          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+          <button
+            className="dashboard-nav-item"
+            onClick={onOpenMarkDonation}
+            type="button"
+          >
             <CheckIcon /> Mark as donated
           </button>
           <button
@@ -602,7 +612,12 @@ function HistoryIcon() {
 
 function CheckIcon() {
   return icon(
-    <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />,
+    <path
+      d="m5 12 4 4L19 6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.5"
+    />,
   );
 }
 

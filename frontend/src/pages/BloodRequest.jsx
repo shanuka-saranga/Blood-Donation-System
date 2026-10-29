@@ -3,7 +3,7 @@ import axios from "axios";
 import "./BloodRequest.css";
 import PageTopbar from "../components/PageTopbar";
 
-const API_BASE_URL = "http://localhost:5000/api/requests";
+const API_BASE_URL = "/api/requests";
 
 const initialForm = {
   patientName: "",

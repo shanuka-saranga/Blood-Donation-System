@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import "./Login.css";
 
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = "/api/auth";
 const initialForm = { name: "", email: "", password: "", confirmPassword: "" };
 
 function Login({ onLoginSuccess }) {
@@ -27,7 +27,10 @@ function Login({ onLoginSuccess }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!form.email || !form.password || (!isLogin && !form.name)) {
-      setMessage({ type: "error", text: "Please fill in all required fields." });
+      setMessage({
+        type: "error",
+        text: "Please fill in all required fields.",
+      });
       return;
     }
     if (!isLogin && form.password !== form.confirmPassword) {
@@ -41,23 +44,36 @@ function Login({ onLoginSuccess }) {
       const endpoint = isLogin ? "/login" : "/register";
       const payload = isLogin
         ? { email: form.email, password: form.password }
-        : { name: form.name, email: form.email, password: form.password, role: "donor" };
+        : {
+            name: form.name,
+            email: form.email,
+            password: form.password,
+            role: "donor",
+          };
       const response = await axios.post(`${API_URL}${endpoint}`, payload);
 
       if (isLogin) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
-        setMessage({ type: "success", text: `Welcome back, ${response.data.user.name}!` });
+        setMessage({
+          type: "success",
+          text: `Welcome back, ${response.data.user.name}!`,
+        });
         if (onLoginSuccess) onLoginSuccess(response.data.user);
       } else {
-        setMessage({ type: "success", text: "Registration successful. You can now sign in." });
+        setMessage({
+          type: "success",
+          text: "Registration successful. You can now sign in.",
+        });
         setMode("login");
         setForm({ ...initialForm, email: form.email });
       }
     } catch (error) {
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Unable to connect to the server. Please try again.",
+        text:
+          error.response?.data?.message ||
+          "Unable to connect to the server. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -72,57 +88,118 @@ function Login({ onLoginSuccess }) {
           <div className="hero-circle hero-circle-bottom" />
           <div className="hero-content">
             <div className="brand brand-light">
-              <div className="brand-icon"><HeartIcon /></div>
+              <div className="brand-icon">
+                <HeartIcon />
+              </div>
               <span>BloodCare</span>
             </div>
             <p className="hero-eyebrow">Give blood. Save lives.</p>
             <h1 className="hero-title">Every donation makes a difference.</h1>
             <p className="hero-description">
-              Join our community and help connect blood donors with people who need them most.
+              Join our community and help connect blood donors with people who
+              need them most.
             </p>
           </div>
-          <p className="hero-footer">Faculty of Technology · University of Ruhuna</p>
+          <p className="hero-footer">
+            Faculty of Technology · University of Ruhuna
+          </p>
         </section>
 
         <section className="login-form-section">
           <div className="login-form-wrapper">
             <div className="mobile-brand">
               <div className="brand brand-dark">
-                <div className="brand-icon"><HeartIcon /></div>
+                <div className="brand-icon">
+                  <HeartIcon />
+                </div>
                 <span>BloodCare</span>
               </div>
             </div>
 
             <div className="form-heading" key={`heading-${mode}`}>
               <p className="form-eyebrow">Welcome</p>
-              <h2>{isLogin ? "Sign in to your account" : "Create your account"}</h2>
+              <h2>
+                {isLogin ? "Sign in to your account" : "Create your account"}
+              </h2>
               <p className="form-description">
-                {isLogin ? "Manage your blood donation journey with us." : "Become a donor and help save lives today."}
+                {isLogin
+                  ? "Manage your blood donation journey with us."
+                  : "Become a donor and help save lives today."}
               </p>
             </div>
 
             <div className="mode-switcher">
-              <button className={`mode-button ${isLogin ? "mode-button-active" : ""}`} onClick={() => switchMode("login")} type="button">
+              <button
+                className={`mode-button ${isLogin ? "mode-button-active" : ""}`}
+                onClick={() => switchMode("login")}
+                type="button"
+              >
                 Login
               </button>
-              <button className={`mode-button ${!isLogin ? "mode-button-active" : ""}`} onClick={() => switchMode("register")} type="button">
+              <button
+                className={`mode-button ${!isLogin ? "mode-button-active" : ""}`}
+                onClick={() => switchMode("register")}
+                type="button"
+              >
                 Register
               </button>
             </div>
 
             {message.text && (
-              <div className={`form-message ${message.type === "error" ? "form-message-error" : "form-message-success"}`} role="alert">
+              <div
+                className={`form-message ${message.type === "error" ? "form-message-error" : "form-message-success"}`}
+                role="alert"
+              >
                 {message.text}
               </div>
             )}
 
             <form className="auth-form" key={mode} onSubmit={handleSubmit}>
-              {!isLogin && <Input label="Full name" name="name" onChange={handleChange} placeholder="Enter your full name" value={form.name} />}
-              <Input label="Email address" name="email" onChange={handleChange} placeholder="you@example.com" type="email" value={form.email} />
-              <Input label="Password" name="password" onChange={handleChange} placeholder="Enter your password" type="password" value={form.password} />
-              {!isLogin && <Input label="Confirm password" name="confirmPassword" onChange={handleChange} placeholder="Re-enter your password" type="password" value={form.confirmPassword} />}
-              <button className="submit-button" disabled={isLoading} type="submit">
-                {isLoading ? "Please wait..." : isLogin ? "Sign in" : "Create account"}
+              {!isLogin && (
+                <Input
+                  label="Full name"
+                  name="name"
+                  onChange={handleChange}
+                  placeholder="Enter your full name"
+                  value={form.name}
+                />
+              )}
+              <Input
+                label="Email address"
+                name="email"
+                onChange={handleChange}
+                placeholder="you@example.com"
+                type="email"
+                value={form.email}
+              />
+              <Input
+                label="Password"
+                name="password"
+                onChange={handleChange}
+                placeholder="Enter your password"
+                type="password"
+                value={form.password}
+              />
+              {!isLogin && (
+                <Input
+                  label="Confirm password"
+                  name="confirmPassword"
+                  onChange={handleChange}
+                  placeholder="Re-enter your password"
+                  type="password"
+                  value={form.confirmPassword}
+                />
+              )}
+              <button
+                className="submit-button"
+                disabled={isLoading}
+                type="submit"
+              >
+                {isLoading
+                  ? "Please wait..."
+                  : isLogin
+                    ? "Sign in"
+                    : "Create account"}
                 {!isLoading && <ArrowIcon />}
               </button>
             </form>
@@ -137,7 +214,15 @@ function Input({ label, name, onChange, placeholder, type = "text", value }) {
   return (
     <label className="input-group">
       <span className="input-label">{label}</span>
-      <input className="form-input" name={name} onChange={onChange} placeholder={placeholder} required type={type} value={value} />
+      <input
+        className="form-input"
+        name={name}
+        onChange={onChange}
+        placeholder={placeholder}
+        required
+        type={type}
+        value={value}
+      />
     </label>
   );
 }
@@ -152,8 +237,18 @@ function HeartIcon() {
 
 function ArrowIcon() {
   return (
-    <svg className="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    <svg
+      className="arrow-icon"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M5 12h14m-6-6 6 6-6 6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
     </svg>
   );
 }
