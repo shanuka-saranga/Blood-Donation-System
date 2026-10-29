@@ -134,14 +134,60 @@
     font-size: 0.875rem;
 }
 
+/* =========================================================
+   RIGHT SIDE FORM SECTION WITH FLOWING BLOOD ANIMATION
+   ========================================================= */
 .login-form-section {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1.5rem 3rem;
+    overflow: hidden;
+    /* Drops එළියට පැනීම වැළැක්වීමට */
+    background: #ffffff;
+}
+
+/* Background Flowing Blood Droplets Effect */
+.login-form-section::before,
+.login-form-section::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 36px;
+    background: rgba(220, 38, 38, 0.738);
+    /* Soft Red Color */
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    filter: blur(1px);
+    pointer-events: none;
+    z-index: 0;
+    animation: blood-drip 7s infinite ease-in-out;
+}
+
+/* First Droplet Position & Timing */
+.login-form-section::before {
+    top: -40px;
+    right: 12%;
+    width: 28px;
+    height: 42px;
+    animation-duration: 8s;
+    animation-delay: 0s;
+}
+
+/* Second Droplet Position & Timing */
+.login-form-section::after {
+    top: -40px;
+    right: 48%;
+    width: 20px;
+    height: 32px;
+    animation-duration: 10s;
+    animation-delay: 4s;
 }
 
 .login-form-wrapper {
+    position: relative;
+    z-index: 1;
+    /* Form Content එක Drops වලට උඩින් තැබීමට */
     width: 100%;
     max-width: 28rem;
 }
@@ -301,6 +347,35 @@
     height: 1rem;
 }
 
+/* =========================================================
+   KEYFRAMES & ANIMATIONS
+   ========================================================= */
+
+/* Blood Drops Flowing Down Animation */
+@keyframes blood-drip {
+    0% {
+        top: -10%;
+        opacity: 0;
+        transform: scaleY(1) translateY(0);
+    }
+
+    15% {
+        opacity: 0.8;
+        transform: scaleY(1.3);
+        /* ගලන විට දිගැති වීම */
+    }
+
+    80% {
+        opacity: 0.5;
+    }
+
+    100% {
+        top: 110%;
+        opacity: 0;
+        transform: scaleY(1) translateY(0);
+    }
+}
+
 @keyframes mode-content-in {
     from {
         opacity: 0;
@@ -326,9 +401,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .form-heading,
     .auth-form,
-    .mode-button-active {
+    .mode-button-active,
+    .login-form-section::before,
+    .login-form-section::after {
         animation: none;
     }
 
