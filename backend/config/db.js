@@ -6,9 +6,13 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 25534,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: false, // Aiven SSL Connection එක සඳහා අනිවාර්යයි
+  },
 });
 
 const promisePool = pool.promise();
@@ -41,7 +45,9 @@ const ensureProfileColumns = async () => {
     );
 
     if (existingColumns[0].count === 0) {
-      await promisePool.query(`ALTER TABLE users ADD COLUMN ${name} ${definition}`);
+      await promisePool.query(
+        `ALTER TABLE users ADD COLUMN ${name} ${definition}`,
+      );
     }
   }
 };
@@ -143,7 +149,10 @@ const ensureBloodRequestsTable = async () => {
     ["accepted_by", "INT NULL"],
     ["accepted_at", "TIMESTAMP NULL"],
     ["created_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"],
-    ["updated_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"],
+    [
+      "updated_at",
+      "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    ],
   ];
 
   for (const [name, definition] of columns) {
@@ -155,7 +164,9 @@ const ensureBloodRequestsTable = async () => {
     );
 
     if (existingColumns[0].count === 0) {
-      await promisePool.query(`ALTER TABLE blood_requests ADD COLUMN ${name} ${definition}`);
+      await promisePool.query(
+        `ALTER TABLE blood_requests ADD COLUMN ${name} ${definition}`,
+      );
     }
   }
 };

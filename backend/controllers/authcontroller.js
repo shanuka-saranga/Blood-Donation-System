@@ -378,10 +378,15 @@ exports.getAdminSummary = async (req, res) => {
          ORDER BY users.name ASC`,
       ),
       db.query(
-        `SELECT id, patient_name, blood_group, hospital_name, city, units_required, urgency, status, required_date
-         FROM blood_requests
-         WHERE LOWER(status) IN ('pending', 'open', 'active')
-         ORDER BY required_date ASC, created_at DESC`,
+        `SELECT requests.id, requests.requester_id, requests.patient_name,
+                requests.blood_group, requests.hospital_name, requests.city,
+                requests.units_required, requests.urgency, requests.status,
+                requests.required_date, users.name AS requester_name,
+                users.email AS requester_email
+         FROM blood_requests AS requests
+         LEFT JOIN users ON users.id = requests.requester_id
+         WHERE LOWER(requests.status) IN ('pending', 'open', 'active')
+         ORDER BY requests.required_date ASC, requests.created_at DESC`,
       ),
       db.query(
         `SELECT id, title, organizer, location, city, camp_date, start_time, end_time

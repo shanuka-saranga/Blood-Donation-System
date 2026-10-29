@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import Login from "./pages/Login";
 import DonorDashboard from "./pages/DonorDashboard";
@@ -51,12 +51,12 @@ function App() {
     localStorage.setItem("darkMode", String(darkMode));
   }, [darkMode]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
     setPage("dashboard");
-  };
+  }, []);
 
   const handleDonorDetails = async (details) => {
     setIsSavingDonorDetails(true);

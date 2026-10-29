@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import "./BloodRequest.css";
 import PageTopbar from "../components/PageTopbar";
+
+const API_BASE_URL = "http://localhost:5000/api/requests";
 
 const initialForm = {
   patientName: "",
@@ -14,11 +16,59 @@ const initialForm = {
   requiredDate: "",
 };
 
-function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfile, onOpenMarkDonation, onLogout }) {
+const URGENCY_OPTIONS = ["Standard", "Urgent", "Critical"];
+
+function BloodRequest({
+  user,
+  onBack,
+  onOpenCamps,
+  onOpenDonations,
+  onOpenProfile,
+  onOpenMarkDonation,
+  onLogout,
+}) {
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [requests, setRequests] = useState([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [requestsError, setRequestsError] = useState("");
+  const [editingRequestId, setEditingRequestId] = useState(null);
+  const [deletingRequestId, setDeletingRequestId] = useState(null);
+  const [requestsVersion, setRequestsVersion] = useState(0);
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    const loadRequests = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/mine`, {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+        });
+        const loadedRequests = response.data.requests || response.data;
+        setRequests(Array.isArray(loadedRequests) ? loadedRequests : []);
+        setRequestsError("");
+      } catch (requestError) {
+        if (requestError.response?.status === 401) {
+          onLogout();
+          return;
+        }
+
+        setRequestsError(
+          requestError.response?.data?.message ||
+            "Unable to load your blood requests.",
+        );
+      } finally {
+        setIsLoadingRequests(false);
+      }
+    };
+
+    loadRequests();
+  }, [onLogout, requestsVersion]);
+
+  const refreshRequests = () => {
+    setRequestsVersion((current) => current + 1);
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -31,15 +81,27 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
     setMessage("");
     setError("");
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/requests",
-        form,
-        {
-          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-        },
+      const response = editingRequestId
+        ? await axios.put(`${API_BASE_URL}/${editingRequestId}`, form, {
+            headers: {
+              Authorization: "Bearer " + localStorage.getItem("token"),
+            },
+          })
+        : await axios.post(API_BASE_URL, form, {
+            headers: {
+              Authorization: "Bearer " + localStorage.getItem("token"),
+            },
+          });
+
+      setMessage(
+        response.data.message ||
+          (editingRequestId
+            ? "Blood request updated successfully."
+            : "Blood request submitted successfully."),
       );
-      setMessage(response.data.message);
       setForm(initialForm);
+      setEditingRequestId(null);
+      refreshRequests();
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
@@ -47,6 +109,55 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditRequest = (request) => {
+    setMessage("");
+    setError("");
+    setEditingRequestId(request.id);
+    setForm({
+      patientName: request.patient_name || "",
+      bloodGroup: request.blood_group || "",
+      unitsRequired: String(request.units_required ?? ""),
+      hospitalName: request.hospital_name || "",
+      city: request.city || "",
+      contactNumber: request.contact_number || "",
+      urgencyLevel: normalizeUrgency(request.urgency || request.urgency_level),
+      requiredDate: toDateInputValue(request.required_date),
+    });
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRequestId(null);
+    setForm(initialForm);
+    setError("");
+    setMessage("");
+  };
+
+  const handleDeleteRequest = async (request) => {
+    const isConfirmed = window.confirm(
+      "Delete this blood request? This action cannot be undone.",
+    );
+    if (!isConfirmed) return;
+
+    setDeletingRequestId(request.id);
+    setRequestsError("");
+    try {
+      await axios.delete(`${API_BASE_URL}/${request.id}`, {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      });
+      if (editingRequestId === request.id) handleCancelEdit();
+      setMessage("Blood request deleted successfully.");
+      refreshRequests();
+    } catch (requestError) {
+      setRequestsError(
+        requestError.response?.data?.message ||
+          "Unable to delete blood request.",
+      );
+    } finally {
+      setDeletingRequestId(null);
     }
   };
 
@@ -76,10 +187,18 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
           >
             <HeartIcon /> I want blood
           </button>
-          <button className="dashboard-nav-item" onClick={onOpenDonations} type="button">
+          <button
+            className="dashboard-nav-item"
+            onClick={onOpenDonations}
+            type="button"
+          >
             <HistoryIcon /> My donations
           </button>
-          <button className="dashboard-nav-item" onClick={onOpenMarkDonation} type="button">
+          <button
+            className="dashboard-nav-item"
+            onClick={onOpenMarkDonation}
+            type="button"
+          >
             <CheckIcon /> Mark as donated
           </button>
           <button
@@ -112,7 +231,11 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
           </p>
         </header>
         <div className="blood-request-workspace">
-          <form className="blood-request-form" onSubmit={handleSubmit}>
+          <form
+            className="blood-request-form"
+            onSubmit={handleSubmit}
+            ref={formRef}
+          >
             <div className="blood-request-fields">
               <label>
                 Patient name
@@ -157,7 +280,11 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
               <label>
                 Required date
                 <input
-                  min={new Date().toISOString().slice(0, 10)}
+                  min={
+                    editingRequestId
+                      ? undefined
+                      : new Date().toISOString().slice(0, 10)
+                  }
                   name="requiredDate"
                   onChange={handleChange}
                   required
@@ -199,9 +326,9 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
                   onChange={handleChange}
                   value={form.urgencyLevel}
                 >
-                  <option>Standard</option>
-                  <option>Urgent</option>
-                  <option>Critical</option>
+                  {URGENCY_OPTIONS.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
                 </select>
               </label>
             </div>
@@ -215,13 +342,29 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
                 {message}
               </p>
             )}
-            <button
-              className="blood-request-submit"
-              disabled={isSubmitting}
-              type="submit"
-            >
-              {isSubmitting ? "Submitting..." : "Submit blood request"}
-            </button>
+            <div className="blood-request-form-actions">
+              <button
+                className="blood-request-submit"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : editingRequestId
+                    ? "Update blood request"
+                    : "Submit blood request"}
+              </button>
+              {editingRequestId && (
+                <button
+                  className="blood-request-cancel"
+                  disabled={isSubmitting}
+                  onClick={handleCancelEdit}
+                  type="button"
+                >
+                  Cancel edit
+                </button>
+              )}
+            </div>
           </form>
           <aside
             aria-label="Blood donation illustration"
@@ -240,9 +383,166 @@ function BloodRequest({ user, onBack, onOpenCamps, onOpenDonations, onOpenProfil
             </p>
           </aside>
         </div>
+
+        <section
+          className="blood-request-list-panel"
+          aria-label="My blood requests"
+        >
+          <div className="blood-request-list-heading">
+            <div>
+              <p className="dashboard-eyebrow">Your activity</p>
+              <h2>My blood requests</h2>
+            </div>
+            <span className="blood-request-list-count">{requests.length}</span>
+          </div>
+
+          {requestsError && (
+            <p className="blood-request-error" role="alert">
+              {requestsError}
+            </p>
+          )}
+
+          {isLoadingRequests && (
+            <p className="blood-request-list-message">
+              Loading your blood requests...
+            </p>
+          )}
+
+          {!isLoadingRequests && !requestsError && requests.length === 0 && (
+            <p className="blood-request-list-message">
+              You have not raised any blood requests yet. Submit the form above
+              to request donors.
+            </p>
+          )}
+
+          {!isLoadingRequests && requests.length > 0 && (
+            <div className="blood-request-list">
+              {requests.map((request) => {
+                const isPending = isPendingStatus(request.status);
+                const isEditing = editingRequestId === request.id;
+                const isDeleting = deletingRequestId === request.id;
+                const urgency = normalizeUrgency(
+                  request.urgency || request.urgency_level,
+                );
+
+                return (
+                  <article
+                    className={`blood-request-card ${isEditing ? "blood-request-card-editing" : ""}`}
+                    key={request.id}
+                  >
+                    <div className="blood-request-card-header">
+                      <span
+                        className={`blood-request-urgency blood-request-urgency-${urgency.toLowerCase()}`}
+                      >
+                        {urgency}
+                      </span>
+                      <span className="blood-request-blood-group">
+                        {request.blood_group || "Blood needed"}
+                      </span>
+                      <span
+                        className={`blood-request-status blood-request-status-${(request.status || "pending").toLowerCase()}`}
+                      >
+                        {request.status || "Pending"}
+                      </span>
+                    </div>
+
+                    <h3>{request.hospital_name || "Hospital not provided"}</h3>
+                    <p className="blood-request-card-meta">
+                      <strong>{formatUnits(request.units_required)}</strong>{" "}
+                      units required · {request.city || "City not provided"} ·
+                      Required on {formatDate(request.required_date)}
+                    </p>
+                    <p className="blood-request-card-contact">
+                      For {request.patient_name || "patient"} ·{" "}
+                      {request.contact_number || "No contact"}
+                    </p>
+
+                    <div className="blood-request-card-actions">
+                      {isPending ? (
+                        <>
+                          <button
+                            className="blood-request-edit"
+                            disabled={isDeleting}
+                            onClick={() => handleEditRequest(request)}
+                            type="button"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="blood-request-delete"
+                            disabled={isDeleting}
+                            onClick={() => handleDeleteRequest(request)}
+                            type="button"
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="blood-request-locked">
+                          Only pending requests can be edited or deleted.
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </section>
     </main>
   );
+}
+
+function isPendingStatus(status) {
+  return (
+    String(status || "")
+      .trim()
+      .toLowerCase() === "pending"
+  );
+}
+
+function normalizeUrgency(value) {
+  const urgency = String(value || "").trim();
+  if (!urgency) return "Standard";
+
+  const matchedOption = URGENCY_OPTIONS.find(
+    (option) => option.toLowerCase() === urgency.toLowerCase(),
+  );
+  return (
+    matchedOption ||
+    urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()
+  );
+}
+
+function toDateInputValue(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function formatDate(value) {
+  if (!value) return "Date unavailable";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatUnits(value) {
+  const units = Number(value);
+  return Number.isFinite(units) ? units.toFixed(2).replace(/\.00$/, "") : "0";
 }
 
 function Icon({ children, className = "dashboard-icon" }) {
@@ -298,7 +598,12 @@ function HistoryIcon() {
 function CheckIcon() {
   return (
     <Icon>
-      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+      <path
+        d="m5 12 4 4L19 6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.5"
+      />
     </Icon>
   );
 }

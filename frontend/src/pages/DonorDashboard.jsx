@@ -354,7 +354,9 @@ function DonorDashboard({ user, onLogout, onOpenCamps, onOpenBloodRequest, onOpe
                     </p>
                   </div>
                 </div>
-                <div className="progress-track"><span /></div>
+                <div className={`progress-track ${!eligibility.isEligible ? "progress-track-not-eligible" : ""}`}>
+                  <span />
+                </div>
                 <p className={`progress-caption ${!eligibility.isEligible ? "progress-caption-not-eligible" : ""}`}>
                   {eligibilityError || (eligibility.isEligible
                     ? "Ready to help someone in need"
