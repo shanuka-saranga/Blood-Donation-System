@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 require("dotenv").config();
 const authRoutes = require("./routes/authroutes");
 const requestRoutes = require("./routes/requestroutes");
@@ -7,22 +8,45 @@ const db = require("./config/db");
 
 const app = express();
 
-// Middlewares
-app.use(cors());
+// 1. Helmet Security Middleware (HTTP Headers Secure කිරීමට)
+app.use(helmet());
+
+// 2. Restricted CORS Middleware (Frontend URL එකට පමණක් Access ලබාදීමට)
+const allowedOrigins = [
+  "https://blood-donation-system.vercel.app", // ඔයාගේ Live Frontend URL එක මෙතනට දාන්න
+  "http://localhost:5173",                     // Local React App එක සඳහා
+  "http://localhost:3000",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Postman හෝ Server-to-Server requests සඳහා origin නොමැත, live frontend සඳහා origin පරීක්ෂා කෙරේ
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS Policy: Direct or Unauthorized access blocked."));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "3mb" }));
 
-// Health Check Route
+// 3. Direct Browser Access Block (Direct Root URL එකෙන් 403 Forbidden පෙන්වයි)
 app.get("/", (req, res) => {
-  res.json({ message: "Blood Donation System API is running..." });
+  res.status(403).json({
+    status: "Forbidden",
+    message: "Access Denied: Direct browser access to Backend API is not allowed.",
+  });
 });
 
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/requests", requestRoutes);
 
-// JSON 404 handler for unmatched API routes.
-// Without this, Express replies with an HTML "Cannot GET ..." page, which makes
-// frontend error handling far harder to debug.
+// JSON 404 handler for unmatched API routes
 app.use("/api", (req, res) => {
   res.status(404).json({
     message: `API route not found: ${req.method} ${req.originalUrl}`,
@@ -41,24 +65,16 @@ const startServer = async () => {
     await db.ensureDonationCampsTable();
     await db.ensureBloodRequestsTable();
 
-    // NOTE: the callback form of app.listen() is registered by Express as a
-    // one-time *error* listener, so on EADDRINUSE it would still run and log a
-    // misleading "Server running on port ..." message. Using the "listening"
-    // event instead guarantees the success message is only printed when the
-    // socket was actually bound.
     const server = app.listen(PORT);
 
     server.once("listening", () => {
       console.log(`Server running on port ${PORT}`);
     });
 
-    // Listen errors are emitted asynchronously, so they are NOT caught by the
-    // try/catch above. Without this handler the process stays alive without
-    // ever serving requests (e.g. when port 5000 is already taken).
     server.on("error", (error) => {
       if (error.code === "EADDRINUSE") {
         console.error(
-          `Port ${PORT} is already in use. Stop the other server process or set a different PORT in backend/.env`,
+          `Port ${PORT} is already in use. Stop the other server process or set a different PORT in backend/.env`
         );
       } else {
         console.error("Server failed to start:", error.message);
