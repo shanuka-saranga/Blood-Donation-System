@@ -21,6 +21,9 @@ SET time_zone = "+00:00";
 -- Database: `blood_donation_db`
 --
 
+CREATE DATABASE `blood_donation_db`;
+USE `blood_donation_db`;
+
 -- --------------------------------------------------------
 
 --
