@@ -260,6 +260,10 @@
   .dashboard-hero-card::after {
     animation: none;
   }
+
+  .hero-card-heart-icon {
+    animation: none;
+  }
 }
 
 .dashboard-hero-card h2 {
@@ -286,14 +290,46 @@
   height: 130px;
   place-items: center;
   margin-right: 50px;
-  color: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #7f1d1d;
+  border: 1px solid rgba(127, 29, 29, 0.5);
   border-radius: 50%;
+  background: rgba(255, 241, 242, 0.22);
 }
 
 .hero-card-heart .dashboard-icon {
   width: 72px;
   height: 72px;
+}
+
+.hero-card-heart-icon {
+  filter: drop-shadow(0 7px 8px rgb(127, 29, 29));
+  transform-origin: 50% 60%;
+  animation: realistic-heartbeat 1.35s ease-in-out infinite;
+}
+
+@keyframes realistic-heartbeat {
+
+  0%,
+  18%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+
+  8% {
+    transform: scale(1.16) rotate(-3deg);
+  }
+
+  13% {
+    transform: scale(1.04) rotate(2deg);
+  }
+
+  28% {
+    transform: scale(1.1) rotate(-2deg);
+  }
+
+  36% {
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 .primary-dashboard-button {
@@ -598,6 +634,134 @@
 
 .progress-caption-not-eligible {
   color: #b91c1c;
+}
+
+.eligibility-next-date {
+  margin-top: 6px;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.eligibility-row>div:last-child {
+  min-width: 0;
+  padding-right: 230px;
+}
+
+.eligibility-countdown {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  overflow: hidden;
+  width: 205px;
+  margin: 0;
+  padding: 10px 12px;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff1f2, #fee2e2);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.12);
+  transform: translateY(-50%);
+}
+
+.countdown-calendar {
+  display: block;
+}
+
+.countdown-calendar-title {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.countdown-calendar-units {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.countdown-calendar-unit {
+  display: grid;
+  min-width: 39px;
+  overflow: hidden;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 3px 7px rgba(185, 28, 28, 0.12);
+}
+
+.countdown-calendar-number {
+  position: relative;
+  display: block;
+  padding: 5px 3px 3px;
+  color: #7f1d1d;
+  font-size: 1.15rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-calendar-seconds .countdown-calendar-number {
+  animation: calendar-number-flip 1s ease-in-out infinite;
+}
+
+.countdown-calendar-label {
+  padding: 3px 2px;
+  color: #fff;
+  background: #b91c1c;
+  font-size: 0.52rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@keyframes calendar-number-flip {
+
+  0%,
+  82%,
+  100% {
+    transform: rotateX(0);
+  }
+
+  90% {
+    transform: rotateX(75deg);
+  }
+}
+
+.eligibility-assessment-status {
+  margin-top: 5px;
+  color: #047857;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .eligibility-row>div:last-child {
+    padding-right: 0;
+  }
+
+  .eligibility-countdown {
+    position: static;
+    width: auto;
+    margin-top: 10px;
+    text-align: left;
+    transform: none;
+  }
+
+  .countdown-calendar-units {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown-calendar-seconds .countdown-calendar-number {
+    animation: none;
+  }
 }
 
 .eligibility-button {
