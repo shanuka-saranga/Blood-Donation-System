@@ -1,0 +1,18 @@
+.appointment-page { display: grid; min-height: 100vh; padding: 32px 18px; place-items: center; color: #1e293b; background: #fff7f7; }
+.appointment-card { position: relative; width: min(100%, 620px); padding: 36px; border: 1px solid #fee2e2; border-radius: 18px; background: #fff; box-shadow: 0 18px 45px rgba(127,29,29,.1); }
+.appointment-back { padding: 0; color: #b91c1c; border: 0; background: transparent; font: inherit; font-weight: 700; cursor: pointer; }
+.appointment-eyebrow { margin: 30px 0 8px; color: #dc2626; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.appointment-card h1 { margin: 0 0 22px; color: #0f172a; font-size: 30px; }
+.appointment-camp-summary { display: grid; gap: 7px; margin-bottom: 24px; padding: 16px; border-radius: 12px; background: #fff1f2; }
+.appointment-camp-summary strong { color: #991b1b; font-size: 17px; }
+.appointment-camp-summary span { color: #64748b; font-size: 13px; }
+.appointment-card form { display: grid; gap: 16px; }
+.appointment-card label { display: grid; gap: 7px; color: #475569; font-size: 13px; font-weight: 700; }
+.appointment-card input, .appointment-card textarea { width: 100%; padding: 11px 12px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+.appointment-card textarea { min-height: 90px; resize: vertical; }
+.appointment-submit, .appointment-card > button:last-child { padding: 12px 16px; color: #fff; border: 0; border-radius: 9px; background: #b91c1c; font: inherit; font-weight: 800; cursor: pointer; }
+.appointment-submit:disabled { cursor: wait; opacity: .7; }
+.appointment-message { padding: 11px 13px; border-radius: 8px; font-size: 13px; }
+.appointment-message.success { color: #166534; background: #dcfce7; }
+.appointment-message.error { color: #991b1b; background: #fee2e2; }
+@media (max-width: 600px) { .appointment-card { padding: 25px 20px; } .appointment-card h1 { font-size: 25px; } }
