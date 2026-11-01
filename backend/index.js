@@ -59,11 +59,15 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   try {
     await db.testConnection();
-    await db.ensureProfileColumns();
-    await db.ensureDonorDetailsTable();
-    await db.ensureDonationRecordsTable();
-    await db.ensureDonationCampsTable();
-    await db.ensureBloodRequestsTable();
+    await db.ensureUserRoles();
+    await db.ensureAppointmentTable();
+    await db.ensureNotificationTable();
+    await db.ensureBloodRequestTable();
+    await db.ensureDonorScreeningFields();
+    await db.ensureDonationFields();
+    await db.ensureAppointmentStatus();
+    await db.ensureVolunteerAssignment();
+    await db.ensureCampOrganizerFields();
 
     const server = app.listen(PORT);
 
