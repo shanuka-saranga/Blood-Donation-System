@@ -67,12 +67,14 @@ CREATE TABLE `blood_requests` (
   `city` varchar(100) NOT NULL,
   `contact_number` varchar(15) NOT NULL,
   `urgency_level` enum('Normal','Urgent','Critical') DEFAULT 'Normal',
-  `status` enum('Pending','Approved','Fulfilled','Cancelled') DEFAULT 'Pending',
+  `status` varchar(30) NOT NULL DEFAULT 'pending',
   `required_date` date NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `urgency` varchar(20) NOT NULL DEFAULT 'standard',
   `accepted_by` int(11) DEFAULT NULL,
   `accepted_at` timestamp NULL DEFAULT NULL,
+  `approved_by` int(11) DEFAULT NULL,
+  `dispatched_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -106,8 +108,61 @@ CREATE TABLE `donation_camps` (
   `end_time` time NOT NULL,
   `contact_number` varchar(15) NOT NULL,
   `description` text DEFAULT NULL,
+  `approval_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `slot_duration_minutes` int(11) NOT NULL DEFAULT 60,
+  `slot_capacity` int(11) NOT NULL DEFAULT 10,
+  `collected_bags` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `camp_requests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created_by` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `organizer` varchar(255) NOT NULL,
+  `location` varchar(255) NOT NULL,
+  `city` varchar(100) NOT NULL,
+  `camp_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `contact_number` varchar(15) NOT NULL,
+  `description` text DEFAULT NULL,
+  `slot_duration_minutes` int(11) NOT NULL DEFAULT 60,
+  `slot_capacity` int(11) NOT NULL DEFAULT 10,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `camp_appointments`
+--
+
+CREATE TABLE `camp_appointments` (
+  `id` int(11) NOT NULL,
+  `camp_id` int(11) NOT NULL,
+  `donor_id` int(11) NOT NULL,
+  `appointment_time` time NOT NULL,
+  `phone` varchar(30) NOT NULL,
+  `notes` text DEFAULT NULL,
+  `volunteer_name` varchar(150) DEFAULT NULL,
+  `status` enum('pending','confirmed','cancelled','completed') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `recipient_id` int(11) NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `message` text NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -150,6 +205,8 @@ CREATE TABLE `donation_records` (
   `request_id` int(11) DEFAULT NULL,
   `donated_date` date NOT NULL,
   `units_donated` decimal(4,2) NOT NULL,
+  `blood_bag_barcode` varchar(100) DEFAULT NULL,
+  `volume_ml` int(11) DEFAULT NULL,
   `hospital_name` varchar(150) NOT NULL,
   `status` varchar(30) NOT NULL DEFAULT 'completed',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -193,9 +250,12 @@ CREATE TABLE `donor_details` (
   `phone` varchar(30) NOT NULL,
   `nic` varchar(20) NOT NULL,
   `age` tinyint(3) UNSIGNED NOT NULL,
+  `date_of_birth` date DEFAULT NULL,
+  `health_questionnaire` text DEFAULT NULL,
   `gender` varchar(20) NOT NULL,
   `city` varchar(100) NOT NULL,
   `last_donated_date` date DEFAULT NULL,
+  `next_eligible_date` date DEFAULT NULL,
   `is_eligible` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -241,12 +301,33 @@ CREATE TABLE `users` (
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('admin','donor') NOT NULL DEFAULT 'donor',
+  `role` enum('admin','donor','camp_organizer','medical_staff') NOT NULL DEFAULT 'donor',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `phone` varchar(30) DEFAULT NULL,
   `blood_group` varchar(5) DEFAULT NULL,
   `location` varchar(120) DEFAULT NULL,
   `profile_picture` mediumtext DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `users`
+  MODIFY `role` enum('admin','donor','camp_organizer','medical_staff') NOT NULL DEFAULT 'donor';
+
+CREATE TABLE `medical_assessments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `donor_id` int(11) NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `assessment_date` date NOT NULL,
+  `pre_screening` text NOT NULL,
+  `hemoglobin` decimal(4,1) DEFAULT NULL,
+  `weight` decimal(5,2) DEFAULT NULL,
+  `blood_bag_barcode` varchar(100) DEFAULT NULL,
+  `eligibility` enum('eligible','ineligible','review') NOT NULL DEFAULT 'review',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `medical_assessments_donor_id` (`donor_id`),
+  KEY `medical_assessments_staff_id` (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -282,6 +363,22 @@ ALTER TABLE `blood_requests`
 ALTER TABLE `donation_camps`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_camp_admin` (`created_by`);
+
+--
+-- Indexes for table `camp_appointments`
+--
+ALTER TABLE `camp_appointments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_donor_camp` (`camp_id`,`donor_id`),
+  ADD KEY `appointment_camp` (`camp_id`),
+  ADD KEY `appointment_donor` (`donor_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `notification_recipient` (`recipient_id`);
 
 --
 -- Indexes for table `donation_history`
@@ -343,6 +440,18 @@ ALTER TABLE `donation_camps`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `camp_appointments`
+--
+ALTER TABLE `camp_appointments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `donation_history`
 --
 ALTER TABLE `donation_history`
@@ -389,6 +498,19 @@ ALTER TABLE `donation_camps`
   ADD CONSTRAINT `fk_camp_admin` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `camp_appointments`
+--
+ALTER TABLE `camp_appointments`
+  ADD CONSTRAINT `fk_appointment_camp` FOREIGN KEY (`camp_id`) REFERENCES `donation_camps` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_appointment_donor` FOREIGN KEY (`donor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `fk_notification_recipient` FOREIGN KEY (`recipient_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `donation_history`
 --
 ALTER TABLE `donation_history`
@@ -412,6 +534,13 @@ ALTER TABLE `donor_details`
 --
 ALTER TABLE `donor_profiles`
   ADD CONSTRAINT `fk_donor_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `medical_assessments`
+--
+ALTER TABLE `medical_assessments`
+  ADD CONSTRAINT `fk_assessment_donor` FOREIGN KEY (`donor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_assessment_staff` FOREIGN KEY (`staff_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
