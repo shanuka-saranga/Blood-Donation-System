@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/login";
+import Login from "./pages/Login";
 import AppContent from "./components/AppContent";
 
 function App() {
