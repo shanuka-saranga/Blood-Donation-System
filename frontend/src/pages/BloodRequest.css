@@ -233,7 +233,8 @@
 }
 
 .blood-request-status-accepted,
-.blood-request-status-approved {
+.blood-request-status-approved,
+.blood-request-status-dispatched {
     color: #065f46;
     background: #d1fae5;
 }
@@ -260,6 +261,28 @@
     margin: 4px 0 0;
     color: #94a3b8;
     font-size: 11px;
+}
+
+.blood-request-tracking {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.blood-request-tracking-step {
+    flex: 1;
+    padding: 6px 4px;
+    color: #94a3b8;
+    border-bottom: 3px solid #e2e8f0;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.blood-request-tracking-step-complete {
+    color: #047857;
+    border-color: #10b981;
 }
 
 .blood-request-card-actions {

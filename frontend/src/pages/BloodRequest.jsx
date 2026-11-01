@@ -22,9 +22,9 @@ function BloodRequest({
   user,
   onBack,
   onOpenCamps,
+  onOpenAppointments,
   onOpenDonations,
   onOpenProfile,
-  onOpenMarkDonation,
   onLogout,
 }) {
   const [form, setForm] = useState(initialForm);
@@ -64,6 +64,8 @@ function BloodRequest({
     };
 
     loadRequests();
+    const intervalId = window.setInterval(loadRequests, 15000);
+    return () => window.clearInterval(intervalId);
   }, [onLogout, requestsVersion]);
 
   const refreshRequests = () => {
@@ -182,6 +184,13 @@ function BloodRequest({
             <CalendarIcon /> Donation camps
           </button>
           <button
+            className="dashboard-nav-item"
+            onClick={onOpenAppointments}
+            type="button"
+          >
+            <CalendarIcon /> My bookings
+          </button>
+          <button
             className="dashboard-nav-item dashboard-nav-item-active"
             type="button"
           >
@@ -193,13 +202,6 @@ function BloodRequest({
             type="button"
           >
             <HistoryIcon /> My donations
-          </button>
-          <button
-            className="dashboard-nav-item"
-            onClick={onOpenMarkDonation}
-            type="button"
-          >
-            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item"
@@ -442,7 +444,7 @@ function BloodRequest({
                       <span
                         className={`blood-request-status blood-request-status-${(request.status || "pending").toLowerCase()}`}
                       >
-                        {request.status || "Pending"}
+                        {formatRequestStatus(request.status)}
                       </span>
                     </div>
 
@@ -456,6 +458,22 @@ function BloodRequest({
                       For {request.patient_name || "patient"} ·{" "}
                       {request.contact_number || "No contact"}
                     </p>
+                    <div className="blood-request-tracking" aria-label="Request status tracking">
+                      {["pending", "approved", "dispatched"].map((stage) => (
+                        <span
+                          className={
+                            `blood-request-tracking-step ${
+                              isTrackingStageComplete(request.status, stage)
+                                ? "blood-request-tracking-step-complete"
+                                : ""
+                            }`
+                          }
+                          key={stage}
+                        >
+                          {formatRequestStatus(stage)}
+                        </span>
+                      ))}
+                    </div>
 
                     <div className="blood-request-card-actions">
                       {isPending ? (
@@ -500,6 +518,17 @@ function isPendingStatus(status) {
       .trim()
       .toLowerCase() === "pending"
   );
+}
+
+function isTrackingStageComplete(status, stage) {
+  const stages = ["pending", "approved", "dispatched"];
+  const currentIndex = stages.indexOf(String(status || "pending").toLowerCase());
+  return currentIndex >= stages.indexOf(stage);
+}
+
+function formatRequestStatus(status) {
+  const value = String(status || "pending").toLowerCase();
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function normalizeUrgency(value) {
@@ -590,19 +619,6 @@ function HistoryIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2"
-      />
-    </Icon>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <Icon>
-      <path
-        d="m5 12 4 4L19 6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2.5"
       />
     </Icon>
   );
