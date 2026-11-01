@@ -10,12 +10,14 @@ function Login({ onLoginSuccess }) {
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
   const isLogin = mode === "login";
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setForm(initialForm);
     setMessage({ type: "", text: "" });
+    setVisiblePasswords({});
   };
 
   const handleChange = (event) => {
@@ -67,6 +69,7 @@ function Login({ onLoginSuccess }) {
         });
         setMode("login");
         setForm({ ...initialForm, email: form.email });
+        setVisiblePasswords({});
       }
     } catch (error) {
       setMessage({
@@ -187,17 +190,27 @@ function Login({ onLoginSuccess }) {
                 name="password"
                 onChange={handleChange}
                 placeholder="Enter your password"
-                type="password"
+                onToggleVisibility={() => setVisiblePasswords((current) => ({
+                  ...current,
+                  password: !current.password,
+                }))}
+                type={visiblePasswords.password ? "text" : "password"}
                 value={form.password}
+                visible={visiblePasswords.password}
               />
               {!isLogin && (
                 <Input
                   label="Confirm password"
                   name="confirmPassword"
                   onChange={handleChange}
+                  onToggleVisibility={() => setVisiblePasswords((current) => ({
+                    ...current,
+                    confirmPassword: !current.confirmPassword,
+                  }))}
                   placeholder="Re-enter your password"
-                  type="password"
+                  type={visiblePasswords.confirmPassword ? "text" : "password"}
                   value={form.confirmPassword}
+                  visible={visiblePasswords.confirmPassword}
                 />
               )}
               <button
@@ -220,20 +233,58 @@ function Login({ onLoginSuccess }) {
   );
 }
 
-function Input({ label, name, onChange, placeholder, type = "text", value }) {
+function Input({
+  label,
+  name,
+  onChange,
+  onToggleVisibility,
+  placeholder,
+  type = "text",
+  value,
+  visible,
+}) {
   return (
     <label className="input-group">
       <span className="input-label">{label}</span>
-      <input
-        className="form-input"
-        name={name}
-        onChange={onChange}
-        placeholder={placeholder}
-        required
-        type={type}
-        value={value}
-      />
+      <span className="input-with-action">
+        <input
+          className="form-input"
+          name={name}
+          onChange={onChange}
+          placeholder={placeholder}
+          required
+          type={type}
+          value={value}
+        />
+        {onToggleVisibility && (
+          <button
+            aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+            className="password-toggle"
+            onClick={onToggleVisibility}
+            type="button"
+          >
+            {visible ? <EyeOffIcon /> : <EyeIcon />}
+          </button>
+        )}
+      </span>
     </label>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path d="m3 3 18 18M10.6 6.2A9.8 9.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17.6 17.6 0 0 1-3.1 3.8M6.2 6.8C3.9 8.5 2.5 12 2.5 12S6 18 12 18c1 0 1.9-.2 2.7-.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
   );
 }
 

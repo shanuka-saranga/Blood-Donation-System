@@ -305,6 +305,44 @@
     font-size: 0.875rem;
 }
 
+.input-with-action {
+    position: relative;
+    display: block;
+}
+
+.input-with-action .form-input {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    place-items: center;
+    color: #64748b;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+    color: #b91c1c;
+    outline: 0;
+    background: #fee2e2;
+}
+
+.password-toggle svg {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
 .form-input::placeholder {
     color: #94a3b8;
 }
