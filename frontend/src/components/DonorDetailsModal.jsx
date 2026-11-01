@@ -7,6 +7,8 @@ function DonorDetailsModal({ onSave, onClose, error, isSaving, showSuccess }) {
     phone: "",
     nic: "",
     age: "",
+    dateOfBirth: "",
+    healthQuestionnaire: "",
     gender: "",
     city: "",
     lastDonatedDate: "",
@@ -68,6 +70,7 @@ function DonorDetailsModal({ onSave, onClose, error, isSaving, showSuccess }) {
           <label>Phone<input name="phone" onChange={handleChange} required value={form.phone} /></label>
           <label>NIC<input name="nic" onChange={handleChange} required value={form.nic} /></label>
           <label>Age<input min="18" max="100" name="age" onChange={handleChange} required type="number" value={form.age} /></label>
+          <label>Date of birth<input name="dateOfBirth" onChange={handleChange} required type="date" value={form.dateOfBirth} /></label>
           <label>
             Gender
             <select name="gender" onChange={handleChange} required value={form.gender}>
@@ -75,6 +78,18 @@ function DonorDetailsModal({ onSave, onClose, error, isSaving, showSuccess }) {
             </select>
           </label>
           <label>City<input name="city" onChange={handleChange} required value={form.city} /></label>
+          <label className="donor-details-wide">
+            Health questionnaire <span className="donor-details-required">(required)</span>
+            <textarea
+              aria-label="Health questionnaire"
+              name="healthQuestionnaire"
+              onChange={handleChange}
+              placeholder="Please describe recent illness, medication, allergies, pregnancy, or other health information."
+              required
+              rows="6"
+              value={form.healthQuestionnaire}
+            />
+          </label>
           <label className="donor-details-wide">
             Last donated date (optional)
             <input name="lastDonatedDate" onChange={handleChange} type="date" value={form.lastDonatedDate} />

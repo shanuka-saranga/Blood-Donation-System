@@ -6,9 +6,12 @@ import BloodRequest from "../pages/BloodRequest";
 import DonationCamps from "../pages/DonationCamps";
 import DonationHistory from "../pages/DonationHistory";
 import DonorDashboard from "../pages/DonorDashboard";
-import MarkDonation from "../pages/MarkDonation";
 import Profile from "../pages/Profile";
 import DonorDetailsModal from "./DonorDetailsModal";
+import MedicalStaffDashboard from "../pages/MedicalStaffDashboard";
+import CampAppointment from "../pages/CampAppointment";
+import MyAppointments from "../pages/MyAppointments";
+import CampOrganizerDashboard from "../pages/CampOrganizerDashboard";
 
 function AppContent({
   user,
@@ -18,8 +21,6 @@ function AppContent({
   onUserUpdate,
 }) {
   const navigate = useNavigate();
-  const [latestDonationDate, setLatestDonationDate] = useState("");
-  const [latestActivity, setLatestActivity] = useState(null);
   const [isSavingDonorDetails, setIsSavingDonorDetails] = useState(false);
   const [donorDetailsError, setDonorDetailsError] = useState("");
   const [showDonorDetailsSuccess, setShowDonorDetailsSuccess] = useState(false);
@@ -31,10 +32,11 @@ function AppContent({
   const donorNavigation = {
     onBack: open("/dashboard"),
     onOpenCamps: open("/camps"),
+    onBookAppointment: (camp) => navigate("/appointments/new", { state: { camp } }),
+    onOpenAppointments: open("/appointments"),
     onOpenBloodRequest: open("/request-blood"),
     onOpenDonations: open("/donations"),
     onOpenProfile: open("/profile"),
-    onOpenMarkDonation: open("/mark-donation"),
     onLogout,
   };
 
@@ -81,6 +83,19 @@ function AppContent({
     );
   }
 
+  if (user.role === "medical_staff") {
+    return (
+      <Routes>
+        <Route path="/medical" element={<MedicalStaffDashboard user={user} onLogout={onLogout} />} />
+        <Route path="*" element={<Navigate replace to="/medical" />} />
+      </Routes>
+    );
+  }
+
+  if (user.role === "camp_organizer") {
+    return <CampOrganizerDashboard user={user} onLogout={onLogout} />;
+  }
+
   return (
     <>
       <Routes>
@@ -90,14 +105,17 @@ function AppContent({
             <DonorDashboard
               {...donorNavigation}
               user={user}
-              latestDonationDate={latestDonationDate}
-              latestActivity={latestActivity}
             />
           }
         />
         <Route
           path="/camps"
           element={<DonationCamps {...donorNavigation} user={user} />}
+        />
+        <Route path="/appointments/new" element={<CampAppointment user={user} />} />
+        <Route
+          path="/appointments"
+          element={<MyAppointments {...donorNavigation} user={user} />}
         />
         <Route
           path="/request-blood"
@@ -106,19 +124,6 @@ function AppContent({
         <Route
           path="/donations"
           element={<DonationHistory {...donorNavigation} user={user} />}
-        />
-        <Route
-          path="/mark-donation"
-          element={
-            <MarkDonation
-              {...donorNavigation}
-              user={user}
-              onDonationRecorded={(donation) => {
-                setLatestDonationDate(donation.date);
-                setLatestActivity(donation);
-              }}
-            />
-          }
         />
         <Route
           path="/profile"
