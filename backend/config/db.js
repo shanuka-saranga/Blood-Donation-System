@@ -1,7 +1,6 @@
 const mysql = require("mysql2");
 require("dotenv").config();
 
-/*
 // Cloud (Aiven) Database Pool Configuration
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -16,9 +15,8 @@ const pool = mysql.createPool({
     rejectUnauthorized: false, // Aiven SSL Connection සඳහා අනිවාර්යයි
   },
 });
-*/
 
-//local db configuration
+/*//local db configuration
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
@@ -30,6 +28,8 @@ const pool = mysql.createPool({
   connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0,
 });
+
+*/
 
 const db = pool.promise();
 
@@ -184,9 +184,7 @@ const ensureCampOrganizerFields = async () => {
     await db.query(
       "ALTER TABLE donation_camps ADD COLUMN approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending' AFTER description",
     );
-    await db.query(
-      "UPDATE donation_camps SET approval_status = 'approved'",
-    );
+    await db.query("UPDATE donation_camps SET approval_status = 'approved'");
   }
   if (!campColumns.some((column) => column.Field === "slot_duration_minutes")) {
     await db.query(
