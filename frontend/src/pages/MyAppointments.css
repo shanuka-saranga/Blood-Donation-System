@@ -1,0 +1,32 @@
+.appointments-content .donation-history-header { max-width: 760px; }
+.appointment-details-card { align-self: start; }
+.appointment-actions { display: flex; gap: 10px; margin-top: 24px; }
+.appointment-actions button,
+.appointment-primary-button {
+  padding: 10px 14px;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  background: #b91c1c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.appointment-actions button:disabled { cursor: wait; opacity: .7; }
+.appointment-actions .appointment-delete-button { color: #991b1b; border: 1px solid #fecaca; background: #fff1f2; }
+.appointment-edit-form { display: grid; gap: 14px; margin-top: 20px; }
+.appointment-edit-form label { display: grid; gap: 6px; color: #64748b; font-size: 12px; font-weight: 700; }
+.appointment-edit-form input,
+.appointment-edit-form textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+.appointment-edit-form textarea { min-height: 78px; resize: vertical; }
+.appointment-qr { display: grid; justify-items: center; gap: 8px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9; }
+.appointment-qr .panel-eyebrow { margin: 0; justify-self: start; }
+.appointment-qr > strong { color: #991b1b; font-size: 15px; }
+.appointment-qr img { width: 180px; height: 180px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.appointment-qr-details { display: grid; width: 100%; gap: 8px; }
+.appointment-qr-details > div { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.appointment-qr-details dt { color: #64748b; font-size: 11px; }
+.appointment-qr-details dd { margin: 0; color: #334155; font-size: 11px; font-weight: 700; text-align: right; }
+.appointment-qr a { color: #b91c1c; font-size: 12px; font-weight: 800; text-decoration: none; }
+@media (max-width: 900px) { .appointment-details-card { min-height: auto; } }
