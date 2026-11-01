@@ -7,8 +7,10 @@ function AdminDashboard({ user, onLogout }) {
   const [error, setError] = useState("");
   const [selectedCard, setSelectedCard] = useState("donors");
   const [showCampForm, setShowCampForm] = useState(false);
+  const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
 
   const adminRequest = (method, url, data) =>
     axios({
@@ -38,6 +40,41 @@ function AdminDashboard({ user, onLogout }) {
       setActionError(
         requestError.response?.data?.message ||
           "Unable to review blood request.",
+      );
+    }
+  };
+
+  const handleAppointmentReview = async (appointmentId, status) => {
+    try {
+      await adminRequest("patch", `/api/auth/admin/appointments/${appointmentId}`, { status });
+      await loadSummary();
+    } catch (requestError) {
+      setActionError(
+        requestError.response?.data?.message || "Unable to update appointment.",
+      );
+    }
+  };
+
+  const handleCampReview = async (campId, status) => {
+    try {
+      await adminRequest("patch", `/api/auth/admin/camp-requests/${campId}`, { status });
+      await loadSummary();
+    } catch (requestError) {
+      setActionError(
+        requestError.response?.data?.message || "Unable to review camp request.",
+      );
+    }
+  };
+
+  const handleInventoryUpdate = async (bloodGroup, availableUnits) => {
+    try {
+      await adminRequest("put", `/api/auth/admin/inventory/${encodeURIComponent(bloodGroup)}`, {
+        availableUnits,
+      });
+      await loadSummary();
+    } catch (requestError) {
+      setActionError(
+        requestError.response?.data?.message || "Unable to update blood stock.",
       );
     }
   };
@@ -88,6 +125,9 @@ function AdminDashboard({ user, onLogout }) {
             <p>Monitor donors, donations, requests, and upcoming camps.</p>
           </div>
           <span className="admin-role-badge">Administrator</span>
+          <button className="admin-add-button" onClick={() => setShowNotificationForm(true)} type="button">
+            Send notification
+          </button>
         </header>
 
         {error && (
@@ -132,13 +172,28 @@ function AdminDashboard({ user, onLogout }) {
             onClick={() => setSelectedCard("camps")}
             value={stats.upcomingCamps || 0}
           />
+          <AdminStat
+            active={selectedCard === "appointments"}
+            label="Camp appointments"
+            onClick={() => setSelectedCard("appointments")}
+            value={stats.appointments || 0}
+          />
         </section>
 
+        <BloodInventory
+          inventory={summary.inventory || []}
+          onUpdate={handleInventoryUpdate}
+        />
+
         <AdminDetails
+          onAppointmentReview={handleAppointmentReview}
+          onCampReview={handleCampReview}
           onDeleteUser={handleDeleteUser}
           onEditUser={setEditingUser}
           onReviewRequest={handleReviewRequest}
           onAddCamp={() => setShowCampForm(true)}
+          onRoleFilterChange={setUserRoleFilter}
+          userRoleFilter={userRoleFilter}
           selectedCard={selectedCard}
           summary={summary}
         />
@@ -199,6 +254,15 @@ function AdminDashboard({ user, onLogout }) {
           }}
         />
       )}
+      {showNotificationForm && (
+        <NotificationForm
+          onClose={() => setShowNotificationForm(false)}
+          onSaved={async () => {
+            setShowNotificationForm(false);
+            await loadSummary();
+          }}
+        />
+      )}
       {editingUser && (
         <UserForm
           user={editingUser}
@@ -210,6 +274,58 @@ function AdminDashboard({ user, onLogout }) {
         />
       )}
     </main>
+  );
+}
+
+function BloodInventory({ inventory, onUpdate }) {
+  const lowStockThreshold = 5;
+  const lowStock = inventory.filter(
+    (item) => Number(item.available_units) <= lowStockThreshold,
+  );
+
+  return (
+    <section className="admin-panel inventory-panel">
+      <div className="admin-panel-heading">
+        <div>
+          <p className="admin-eyebrow">Live blood stock</p>
+          <h2>Blood inventory by group</h2>
+        </div>
+        <span>Refreshes every 15 seconds</span>
+      </div>
+      {lowStock.length > 0 && (
+        <div className="inventory-alert" role="alert">
+          <strong>Low stock alert</strong>
+          <span>
+            {lowStock.map((item) => `${item.blood_group} (${item.available_units} bags)`).join(", ")}
+          </span>
+        </div>
+      )}
+      {!inventory.length ? (
+        <p className="admin-empty">No blood inventory records found.</p>
+      ) : (
+        <div className="inventory-grid">
+          {inventory.map((item) => {
+            const units = Number(item.available_units) || 0;
+            const isLow = units <= lowStockThreshold;
+            return (
+              <article className={`inventory-card ${isLow ? "inventory-card-low" : ""}`} key={item.id}>
+                <div className="inventory-card-top">
+                  <strong>{item.blood_group}</strong>
+                  {isLow && <span>Low</span>}
+                </div>
+                <b>{units}</b>
+                <small>bags available</small>
+                <time dateTime={item.last_updated}>Updated {formatDateTime(item.last_updated)}</time>
+                <div className="inventory-update">
+                  <input aria-label={`Update ${item.blood_group} bags`} defaultValue={units} min="0" type="number" />
+                  <button onClick={(event) => onUpdate(item.blood_group, event.currentTarget.previousElementSibling.value)} type="button">Update</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -247,6 +363,7 @@ function CampForm({ onClose, onSaved }) {
     } finally {
       setSaving(false);
     }
+
   };
   return (
     <div className="admin-modal-overlay">
@@ -387,6 +504,62 @@ function AdminStat({ active, label, onClick, value }) {
   );
 }
 
+function NotificationForm({ onClose, onSaved }) {
+  const [form, setForm] = useState({ role: "donor", title: "", message: "" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await axios.post("/api/auth/admin/notifications", form, {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      });
+      await onSaved();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Unable to send notification.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-overlay">
+      <form className="admin-camp-form" onSubmit={handleSubmit}>
+        <button className="admin-modal-close" onClick={onClose} type="button">×</button>
+        <p className="admin-eyebrow">User communication</p>
+        <h2>Send notification</h2>
+        {error && <p className="admin-error">{error}</p>}
+        <div className="admin-camp-fields">
+          <label>
+            Send to role
+            <select name="role" onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))} value={form.role}>
+              <option value="donor">Donors</option>
+              <option value="camp_organizer">Camp organizers</option>
+              <option value="medical_staff">Medical staff</option>
+              <option value="admin">Administrators</option>
+            </select>
+          </label>
+          <label className="admin-camp-wide">
+            Title
+            <input maxLength="150" name="title" onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required value={form.title} />
+          </label>
+          <label className="admin-camp-wide">
+            Message
+            <textarea name="message" onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))} required value={form.message} />
+          </label>
+        </div>
+        <div className="admin-camp-actions">
+          <button className="admin-cancel-button" onClick={onClose} type="button">Cancel</button>
+          <button className="admin-submit-button" disabled={saving} type="submit">{saving ? "Sending..." : "Send notification"}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function UserForm({ onClose, onSaved, user }) {
   const [form, setForm] = useState({
     name: user.name,
@@ -451,6 +624,8 @@ function UserForm({ onClose, onSaved, user }) {
             >
               <option value="donor">Donor</option>
               <option value="admin">Admin</option>
+              <option value="camp_organizer">Camp organizer</option>
+              <option value="medical_staff">Medical staff</option>
             </select>
           </label>
         </div>
@@ -481,12 +656,16 @@ function UserForm({ onClose, onSaved, user }) {
 }
 
 function AdminDetails({
+  onAppointmentReview,
+  onCampReview,
   onAddCamp,
   onDeleteUser,
   onEditUser,
   onReviewRequest,
+  onRoleFilterChange,
   selectedCard,
   summary,
+  userRoleFilter,
 }) {
   const titles = {
     users: "Registered users",
@@ -495,10 +674,13 @@ function AdminDetails({
     donations: "Donation records",
     requests: "Active blood requests",
     camps: "Upcoming donation camps",
+    appointments: "Camp appointments",
   };
-  const items =
+  const selectedItems =
     selectedCard === "camps"
       ? summary.upcomingCamps
+      : selectedCard === "appointments"
+        ? summary.appointments
       : selectedCard === "requests"
         ? summary.activeRequests
         : selectedCard === "eligible"
@@ -508,6 +690,9 @@ function AdminDetails({
             : selectedCard === "users"
               ? summary.users
               : summary.donors;
+  const items = selectedCard === "users" && userRoleFilter !== "all"
+    ? selectedItems.filter((item) => item.role === userRoleFilter)
+    : selectedItems;
   return (
     <section className="admin-panel admin-detail-panel">
       <div className="admin-panel-heading">
@@ -516,6 +701,20 @@ function AdminDetails({
           <h2>{titles[selectedCard]}</h2>
         </div>
         <div className="admin-detail-actions">
+          {selectedCard === "users" && (
+            <select
+              aria-label="Filter users by role"
+              className="admin-role-filter"
+              onChange={(event) => onRoleFilterChange(event.target.value)}
+              value={userRoleFilter}
+            >
+              <option value="all">All roles</option>
+              <option value="admin">Admins</option>
+              <option value="medical_staff">Medical staff</option>
+              <option value="camp_organizer">Camp organizers</option>
+              <option value="donor">Donors</option>
+            </select>
+          )}
           <span>{items?.length || 0} records</span>
           {selectedCard === "camps" && (
             <button
@@ -540,6 +739,16 @@ function AdminDetails({
                     {item.city} · {formatDate(item.camp_date)}
                   </span>
                   <small>{item.organizer}</small>
+                  <small className={`camp-approval-status camp-approval-${item.approval_status || "approved"}`}>
+                    <span className="camp-approval-dot" />
+                    {item.approval_status || "approved"}
+                  </small>
+                  {(item.approval_status === "pending" || !item.approval_status) && (
+                    <div className="admin-item-actions">
+                      <button className="admin-approve-button camp-action-button" onClick={() => onCampReview(item.id, "approved")} type="button">✓ Approve</button>
+                      <button className="admin-decline-button camp-action-button" onClick={() => onCampReview(item.id, "rejected")} type="button">× Decline</button>
+                    </div>
+                  )}
                 </>
               )}
               {selectedCard === "requests" && (
@@ -552,6 +761,9 @@ function AdminDetails({
                   </span>
                   <small>
                     {item.units_required} units · {item.urgency}
+                    {item.inventory_available
+                      ? ` · Stock available: ${item.available_units}`
+                      : ` · Stock unavailable (available: ${item.available_units || 0})`}
                     {item.requester_name
                       ? ` · Requested by ${item.requester_name}`
                       : ""}
@@ -559,10 +771,11 @@ function AdminDetails({
                   <div className="admin-item-actions">
                     <button
                       className="admin-approve-button"
+                      disabled={!Number(item.inventory_available)}
                       onClick={() => onReviewRequest(item.id, "approve")}
                       type="button"
                     >
-                      Approve
+                      {Number(item.inventory_available) ? "Approve & dispatch" : "Insufficient stock"}
                     </button>
                     <button
                       className="admin-decline-button"
@@ -572,6 +785,34 @@ function AdminDetails({
                       Decline
                     </button>
                   </div>
+                </>
+              )}
+              {selectedCard === "appointments" && (
+                <>
+                  <strong>{item.donor_name}</strong>
+                  <span>{item.camp_title} · {formatDate(item.camp_date)}</span>
+                  <small>
+                    Appointment: {String(item.appointment_time).slice(0, 5)} · {item.phone}
+                  </small>
+                  <small>Status: {item.status}</small>
+                  {item.status === "pending" && (
+                    <div className="admin-item-actions">
+                      <button
+                        className="admin-approve-button"
+                        onClick={() => onAppointmentReview(item.id, "confirmed")}
+                        type="button"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="admin-decline-button"
+                        onClick={() => onAppointmentReview(item.id, "cancelled")}
+                        type="button"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
               {selectedCard === "donations" && (
@@ -609,6 +850,7 @@ function AdminDetails({
                 </>
               )}
               {selectedCard !== "camps" &&
+                selectedCard !== "appointments" &&
                 selectedCard !== "requests" &&
                 selectedCard !== "donations" &&
                 selectedCard !== "users" && (
@@ -637,6 +879,18 @@ function formatDate(value) {
         day: "2-digit",
         month: "short",
         year: "numeric",
+      }).format(date);
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Unavailable"
+    : new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
       }).format(date);
 }
 
