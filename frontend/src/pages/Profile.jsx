@@ -11,9 +11,9 @@ function Profile({
   onUserUpdate,
   onBack,
   onOpenCamps,
+  onOpenAppointments,
   onOpenBloodRequest,
   onOpenDonations,
-  onOpenMarkDonation,
   onLogout,
   darkMode,
   onToggleDarkMode,
@@ -33,6 +33,8 @@ function Profile({
     phone: user.donorDetails?.phone || user.phone || "",
     nic: user.donorDetails?.nic || "",
     age: user.donorDetails?.age || "",
+    dateOfBirth: user.donorDetails?.dateOfBirth || "",
+    healthQuestionnaire: user.donorDetails?.healthQuestionnaire || "",
     gender: user.donorDetails?.gender || "",
     city: user.donorDetails?.city || user.location || "",
     lastDonatedDate: user.donorDetails?.lastDonatedDate || "",
@@ -214,6 +216,13 @@ function Profile({
           </button>
           <button
             className="dashboard-nav-item"
+            onClick={onOpenAppointments}
+            type="button"
+          >
+            <CalendarIcon /> My bookings
+          </button>
+          <button
+            className="dashboard-nav-item"
             onClick={onOpenBloodRequest}
             type="button"
           >
@@ -225,13 +234,6 @@ function Profile({
             type="button"
           >
             <HistoryIcon /> My donations
-          </button>
-          <button
-            className="dashboard-nav-item"
-            onClick={onOpenMarkDonation}
-            type="button"
-          >
-            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item dashboard-nav-item-active"
@@ -375,6 +377,17 @@ function Profile({
                 />
               </label>
               <label>
+                Date of birth
+                <input
+                  className="profile-input"
+                  name="dateOfBirth"
+                  onChange={handleDonorDetailChange}
+                  required
+                  type="date"
+                  value={donorDetails.dateOfBirth}
+                />
+              </label>
+              <label>
                 Gender
                 <select
                   className="profile-select"
@@ -397,6 +410,19 @@ function Profile({
                   onChange={handleDonorDetailChange}
                   required
                   value={donorDetails.city}
+                />
+              </label>
+              <label className="profile-field-wide">
+                Health questionnaire <span className="profile-required">(required)</span>
+                <textarea
+                  aria-label="Health questionnaire"
+                  className="profile-input"
+                  name="healthQuestionnaire"
+                  onChange={handleDonorDetailChange}
+                  placeholder="Please describe recent illness, medication, allergies, pregnancy, or other health information."
+                  required
+                  rows="6"
+                  value={donorDetails.healthQuestionnaire}
                 />
               </label>
               <label className="profile-field-wide">
@@ -606,17 +632,6 @@ function HistoryIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth="2"
-    />,
-  );
-}
-
-function CheckIcon() {
-  return icon(
-    <path
-      d="m5 12 4 4L19 6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2.5"
     />,
   );
 }
