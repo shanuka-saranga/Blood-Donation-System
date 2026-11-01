@@ -7,9 +7,10 @@ function DonationCamps({
   user,
   onBack,
   onOpenBloodRequest,
+  onOpenAppointments,
   onOpenDonations,
   onOpenProfile,
-  onOpenMarkDonation,
+  onBookAppointment,
   onLogout,
 }) {
   const [camps, setCamps] = useState([]);
@@ -87,6 +88,13 @@ function DonationCamps({
           </button>
           <button
             className="dashboard-nav-item"
+            onClick={onOpenAppointments}
+            type="button"
+          >
+            <CalendarIcon /> My bookings
+          </button>
+          <button
+            className="dashboard-nav-item"
             onClick={onOpenBloodRequest}
             type="button"
           >
@@ -98,13 +106,6 @@ function DonationCamps({
             type="button"
           >
             <HistoryIcon /> My donations
-          </button>
-          <button
-            className="dashboard-nav-item"
-            onClick={onOpenMarkDonation}
-            type="button"
-          >
-            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item"
@@ -206,27 +207,28 @@ function DonationCamps({
             <div className="camp-list">
               {filteredCamps.length ? (
                 filteredCamps.map((camp) => (
-                  <button
-                    className={`camp-location ${selectedCamp.id === camp.id ? "camp-location-active" : ""}`}
+                  <div
+                    className="camp-location-card"
                     key={camp.id}
-                    onClick={() => setSelectedCamp(camp)}
-                    type="button"
                   >
-                    <span className="camp-location-icon">
-                      <MapPinIcon />
-                    </span>
-                    <span className="camp-location-details">
-                      <strong>{camp.name}</strong>
-                      <span>{camp.address}</span>
-                      <small>{camp.organizer}</small>
-                      <small>
-                        {formatCampDate(camp.camp_date)} ·{" "}
-                        {formatCampTime(camp.start_time)} -{" "}
-                        {formatCampTime(camp.end_time)}
-                      </small>
-                    </span>
-                    <ArrowIcon />
-                  </button>
+                    <button
+                      className={`camp-location ${selectedCamp?.id === camp.id ? "camp-location-active" : ""}`}
+                      onClick={() => setSelectedCamp(camp)}
+                      type="button"
+                    >
+                      <span className="camp-location-icon"><MapPinIcon /></span>
+                      <span className="camp-location-details">
+                        <strong>{camp.name}</strong>
+                        <span>{camp.address}</span>
+                        <small>{camp.organizer}</small>
+                        <small>{formatCampDate(camp.camp_date)} · {formatCampTime(camp.start_time)} - {formatCampTime(camp.end_time)}</small>
+                      </span>
+                      <ArrowIcon />
+                    </button>
+                    <button className="book-appointment-button" onClick={() => onBookAppointment(camp)} type="button">
+                      Book your appointment
+                    </button>
+                  </div>
                 ))
               ) : (
                 <p className="empty-camps">
@@ -383,24 +385,6 @@ function HistoryIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      className="dashboard-icon"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="m5 12 4 4L19 6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2.5"
       />
     </svg>
   );

@@ -168,6 +168,11 @@
   gap: 10px;
 }
 
+.camp-location-card {
+  display: grid;
+  gap: 8px;
+}
+
 .camp-location {
   display: flex;
   align-items: center;
@@ -181,6 +186,25 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.book-appointment-button {
+  margin-left: 55px;
+  padding: 9px 12px;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f2;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+}
+
+.book-appointment-button:hover {
+  color: #fff;
+  background: #b91c1c;
 }
 
 .camp-location:hover,
