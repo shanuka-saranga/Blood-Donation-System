@@ -3,7 +3,7 @@ import axios from "axios";
 import "./Login.css";
 
 const API_URL = "/api/auth";
-const initialForm = { name: "", email: "", password: "", confirmPassword: "" };
+const initialForm = { name: "", email: "", password: "", confirmPassword: "", role: "donor" };
 
 function Login({ onLoginSuccess }) {
   const [mode, setMode] = useState("login");
@@ -48,7 +48,7 @@ function Login({ onLoginSuccess }) {
             name: form.name,
             email: form.email,
             password: form.password,
-            role: "donor",
+            role: form.role,
           };
       const response = await axios.post(`${API_URL}${endpoint}`, payload);
 
@@ -163,6 +163,16 @@ function Login({ onLoginSuccess }) {
                   placeholder="Enter your full name"
                   value={form.name}
                 />
+              )}
+              {!isLogin && (
+                <label className="input-group">
+                  <span className="input-label">Account type</span>
+                  <select className="form-input" name="role" onChange={handleChange} value={form.role}>
+                    <option value="donor">Donor</option>
+                    <option value="medical_staff">Medical staff</option>
+                    <option value="camp_organizer">Camp organizer</option>
+                  </select>
+                </label>
               )}
               <Input
                 label="Email address"

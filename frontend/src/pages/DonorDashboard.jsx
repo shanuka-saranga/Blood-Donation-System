@@ -8,21 +8,16 @@ function DonorDashboard({
   user,
   onLogout,
   onOpenCamps,
+  onOpenAppointments,
   onOpenBloodRequest,
   onOpenDonations,
   onOpenProfile,
-  onOpenMarkDonation,
-  latestDonationDate,
-  latestActivity,
+  onBookAppointment,
 }) {
   const firstName = user.name?.split(" ")[0] || "Donor";
   const [timeOfDay, setTimeOfDay] = useState(getTimeOfDay);
   const eligibilityStorageKey = `eligibility:${user.id}`;
-  const lastDonationStorageKey = `lastDonation:${user.id}`;
-  const [lastDonatedDate, setLastDonatedDate] = useState(
-    () =>
-      latestDonationDate || localStorage.getItem(lastDonationStorageKey) || "",
-  );
+  const [lastDonatedDate, setLastDonatedDate] = useState("");
   const [totalDonations, setTotalDonations] = useState(0);
   const [eligibility, setEligibility] = useState(() => {
     try {
@@ -35,15 +30,24 @@ function DonorDashboard({
   });
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
   const [eligibilityError, setEligibilityError] = useState("");
-  const [showDonationForm, setShowDonationForm] = useState(false);
-  const [isSubmittingDonation, setIsSubmittingDonation] = useState(false);
-  const [donationError, setDonationError] = useState("");
-  const [donationSuccess, setDonationSuccess] = useState(false);
+  const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [upcomingCamps, setUpcomingCamps] = useState([]);
   const [campsError, setCampsError] = useState("");
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activityError, setActivityError] = useState("");
+
+  useEffect(() => {
+    if (!eligibility?.nextEligibleDate) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCountdownNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [eligibility?.isEligible, eligibility?.nextEligibleDate]);
 
   const loadActivities = async () => {
     try {
@@ -53,18 +57,7 @@ function DonorDashboard({
       const loadedActivities = Array.isArray(response.data.activities)
         ? response.data.activities
         : [];
-      setActivities(
-        latestActivity
-          ? [
-              latestActivity,
-              ...loadedActivities.filter(
-                (activity) =>
-                  activity.type !== latestActivity.type ||
-                  activity.date !== latestActivity.date,
-              ),
-            ].slice(0, 5)
-          : loadedActivities,
-      );
+      setActivities(loadedActivities);
       setActivityError("");
     } catch (error) {
       setActivityError(
@@ -93,30 +86,10 @@ function DonorDashboard({
   }, []);
 
   useEffect(() => {
-    if (!latestDonationDate) return;
-    setLastDonatedDate(latestDonationDate);
-    localStorage.setItem(lastDonationStorageKey, latestDonationDate);
-  }, [latestDonationDate, lastDonationStorageKey]);
-
-  useEffect(() => {
-    if (!latestActivity) return;
-    setActivities((currentActivities) =>
-      [
-        latestActivity,
-        ...currentActivities.filter(
-          (activity) =>
-            activity.type !== latestActivity.type ||
-            activity.date !== latestActivity.date,
-        ),
-      ].slice(0, 5),
-    );
-  }, [latestActivity]);
-
-  useEffect(() => {
     const refreshActivitiesWhenVisible = () => {
       if (document.visibilityState === "visible") loadActivities();
     };
-    loadActivities();
+    const activityLoadId = window.setTimeout(loadActivities, 0);
     document.addEventListener("visibilitychange", refreshActivitiesWhenVisible);
     window.addEventListener("focus", loadActivities);
     const activityRefreshId = window.setInterval(loadActivities, 15000);
@@ -127,6 +100,7 @@ function DonorDashboard({
       );
       window.removeEventListener("focus", loadActivities);
       window.clearInterval(activityRefreshId);
+      window.clearTimeout(activityLoadId);
     };
   }, []);
 
@@ -155,10 +129,6 @@ function DonorDashboard({
     setEligibility(nextEligibility);
     if (nextEligibility.lastDonatedDate) {
       setLastDonatedDate(nextEligibility.lastDonatedDate);
-      localStorage.setItem(
-        lastDonationStorageKey,
-        nextEligibility.lastDonatedDate,
-      );
     }
     localStorage.setItem(
       eligibilityStorageKey,
@@ -169,15 +139,15 @@ function DonorDashboard({
   useEffect(() => {
     const loadDonationSummary = async () => {
       try {
-        const savedDonationDate =
-          localStorage.getItem(lastDonationStorageKey) || "";
         const headers = {
           headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         };
-        const [donationsResult, eligibilityResult] = await Promise.allSettled([
+        const [donationsResult, latestDonationResult, eligibilityResult] =
+          await Promise.allSettled([
           axios.get("/api/auth/donations", headers),
+          axios.get("/api/auth/donations/latest", headers),
           axios.get("/api/auth/eligibility", headers),
-        ]);
+          ]);
 
         if (donationsResult.status === "rejected") {
           throw donationsResult.reason;
@@ -186,16 +156,14 @@ function DonorDashboard({
         const donations = Array.isArray(donationsResult.value.data.donations)
           ? donationsResult.value.data.donations
           : [];
-        const latestDate = donations[0]?.donated_date || "";
-        const displayedDate =
-          latestDonationDate || savedDonationDate || latestDate;
+        const latestDate =
+          latestDonationResult.status === "fulfilled"
+            ? latestDonationResult.value.data.lastDonatedDate || ""
+            : "";
+        const displayedDate = latestDate;
 
         setTotalDonations(donations.length);
         setLastDonatedDate(displayedDate);
-        if (displayedDate) {
-          localStorage.setItem(lastDonationStorageKey, displayedDate);
-        }
-
         if (eligibilityResult.status === "fulfilled") {
           updateEligibility({
             isEligible: eligibilityResult.value.data.isEligible,
@@ -203,6 +171,11 @@ function DonorDashboard({
               displayedDate ||
               eligibilityResult.value.data.lastDonatedDate ||
               latestDate,
+            nextEligibleDate: eligibilityResult.value.data.nextEligibleDate || "",
+            assessmentEligibility:
+              latestDonationResult.status === "fulfilled"
+                ? latestDonationResult.value.data.assessmentEligibility || ""
+                : "",
             message: eligibilityResult.value.data.message,
           });
         } else if (eligibilityResult.reason.response?.status === 401) {
@@ -222,29 +195,18 @@ function DonorDashboard({
     };
 
     loadDonationSummary();
-  }, [lastDonationStorageKey]);
-
-  /* Keep the overview cards in sync when a donation is submitted here. */
-  const refreshDonationSummary = async () => {
-    try {
-      const response = await axios.get("/api/auth/donations", {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-      });
-      const donations = Array.isArray(response.data.donations)
-        ? response.data.donations
-        : [];
-      const latestDate = donations[0]?.donated_date || "";
-      setTotalDonations(donations.length);
-      setLastDonatedDate(latestDate);
-      if (latestDate) {
-        localStorage.setItem(lastDonationStorageKey, latestDate);
-      }
-    } catch (error) {
-      if (error.response?.status === 401) {
-        setEligibilityError("Your session has expired. Please sign in again.");
-      }
-    }
-  };
+    const refreshSummary = () => {
+      if (document.visibilityState === "visible") loadDonationSummary();
+    };
+    const summaryRefreshId = window.setInterval(loadDonationSummary, 15000);
+    window.addEventListener("focus", refreshSummary);
+    document.addEventListener("visibilitychange", refreshSummary);
+    return () => {
+      window.clearInterval(summaryRefreshId);
+      window.removeEventListener("focus", refreshSummary);
+      document.removeEventListener("visibilitychange", refreshSummary);
+    };
+  }, []);
 
   const handleCheckEligibility = async () => {
     setIsCheckingEligibility(true);
@@ -260,34 +222,6 @@ function DonorDashboard({
       );
     } finally {
       setIsCheckingEligibility(false);
-    }
-  };
-
-  const handleMarkDonation = async (donation) => {
-    setIsSubmittingDonation(true);
-    setDonationError("");
-    try {
-      const response = await axios.post("/api/auth/donations", donation, {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-      });
-      updateEligibility({
-        isEligible: response.data.isEligible,
-        lastDonatedDate:
-          response.data.donation?.donatedDate || donation.donatedDate,
-        message: response.data.message,
-      });
-      await refreshDonationSummary();
-      setDonationSuccess(true);
-      setTimeout(() => {
-        setDonationSuccess(false);
-        setShowDonationForm(false);
-      }, 1800);
-    } catch (error) {
-      setDonationError(
-        error.response?.data?.message || "Unable to record donation.",
-      );
-    } finally {
-      setIsSubmittingDonation(false);
     }
   };
 
@@ -317,6 +251,13 @@ function DonorDashboard({
           </button>
           <button
             className="dashboard-nav-item"
+            onClick={onOpenAppointments}
+            type="button"
+          >
+            <CalendarIcon /> My bookings
+          </button>
+          <button
+            className="dashboard-nav-item"
             onClick={onOpenBloodRequest}
             type="button"
           >
@@ -328,13 +269,6 @@ function DonorDashboard({
             type="button"
           >
             <HistoryIcon /> My donations
-          </button>
-          <button
-            className="dashboard-nav-item"
-            onClick={onOpenMarkDonation}
-            type="button"
-          >
-            <CheckIcon /> Mark as donated
           </button>
           <button
             className="dashboard-nav-item"
@@ -372,6 +306,14 @@ function DonorDashboard({
               Find a nearby blood donation camp and make your next life-saving
               donation.
             </p>
+            {eligibility?.assessmentEligibility && (
+              <p className="eligibility-assessment-status">
+                Latest assessment:{" "}
+                {eligibility.assessmentEligibility === "eligible"
+                  ? "Passed / Eligible"
+                  : eligibility.assessmentEligibility}
+              </p>
+            )}
             <div className="hero-card-actions">
               <button
                 className="primary-dashboard-button"
@@ -390,7 +332,7 @@ function DonorDashboard({
             </div>
           </div>
           <div className="hero-card-heart">
-            <HeartIcon />
+            <HeartIcon className="hero-card-heart-icon" />
           </div>
         </section>
 
@@ -465,6 +407,19 @@ function DonorDashboard({
                           : "No previous donation is recorded. You can donate blood."
                         : `Last donated on ${formatDonationDate(eligibility.lastDonatedDate)}. At least 3 months should pass between donations.`}
                     </p>
+                    {eligibility.nextEligibleDate && (
+                      <>
+                        <p className="eligibility-next-date">
+                          Next eligible date: {formatDonationDate(eligibility.nextEligibleDate)}
+                        </p>
+                        <p className="eligibility-countdown" aria-live="polite">
+                          <EligibilityCountdown
+                            dateValue={eligibility.nextEligibleDate}
+                            now={countdownNow}
+                          />
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div
@@ -522,18 +477,6 @@ function DonorDashboard({
                 {eligibilityError}
               </p>
             )}
-            <button
-              className="donation-button"
-              disabled={!eligibility || !eligibility.isEligible}
-              onClick={onOpenMarkDonation}
-              type="button"
-            >
-              {!eligibility
-                ? "Check eligibility first"
-                : eligibility.isEligible
-                  ? "Mark as donated"
-                  : "Not eligible to donate"}
-            </button>
           </section>
 
           <section className="dashboard-panel">
@@ -617,26 +560,18 @@ function DonorDashboard({
           )}
         </section>
       </section>
-      {showDonationForm && (
-        <DonationForm
-          error={donationError}
-          isSaving={isSubmittingDonation}
-          onClose={() => setShowDonationForm(false)}
-          onSubmit={handleMarkDonation}
-          success={donationSuccess}
-        />
-      )}
       {selectedCamp && (
         <CampDetailsModal
           camp={selectedCamp}
           onClose={() => setSelectedCamp(null)}
+          onBookAppointment={onBookAppointment}
         />
       )}
     </main>
   );
 }
 
-function CampDetailsModal({ camp, onClose }) {
+function CampDetailsModal({ camp, onClose, onBookAppointment }) {
   return (
     <div className="donation-modal-overlay" onMouseDown={onClose}>
       <section
@@ -689,6 +624,13 @@ function CampDetailsModal({ camp, onClose }) {
         </dl>
         <div className="donation-modal-actions">
           <button
+            className="primary-dashboard-button"
+            onClick={() => onBookAppointment(camp)}
+            type="button"
+          >
+            Book your appointment
+          </button>
+          <button
             className="donation-cancel-button"
             onClick={onClose}
             type="button"
@@ -697,135 +639,6 @@ function CampDetailsModal({ camp, onClose }) {
           </button>
         </div>
       </section>
-    </div>
-  );
-}
-
-function DonationForm({ error, isSaving, onClose, onSubmit, success }) {
-  const [form, setForm] = useState({
-    donatedDate: new Date().toISOString().slice(0, 10),
-    unitsDonated: "1",
-    hospitalName: "",
-    requestId: "",
-    status: "completed",
-  });
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    onSubmit(form);
-  };
-
-  if (success) {
-    return (
-      <div className="donation-modal-overlay">
-        <section
-          aria-live="polite"
-          className="donation-modal donation-success-modal"
-        >
-          <div className="donation-success-icon">✓</div>
-          <p className="dashboard-eyebrow">Donation recorded</p>
-          <h2>Thank you for saving lives!</h2>
-          <p>Your donation has been submitted successfully.</p>
-        </section>
-      </div>
-    );
-  }
-
-  return (
-    <div className="donation-modal-overlay">
-      <form className="donation-modal" onSubmit={handleSubmit}>
-        <button
-          aria-label="Close donation form"
-          className="donation-modal-close"
-          onClick={onClose}
-          type="button"
-        >
-          ×
-        </button>
-        <p className="dashboard-eyebrow">Donation history</p>
-        <h2>Mark as donated</h2>
-        <p className="donation-modal-description">
-          Add the details of the blood donation you completed.
-        </p>
-        <div className="donation-form-fields">
-          <label>
-            Donation date
-            <input
-              max={new Date().toISOString().slice(0, 10)}
-              name="donatedDate"
-              onChange={handleChange}
-              required
-              type="date"
-              value={form.donatedDate}
-            />
-          </label>
-          <label>
-            Units donated
-            <select
-              name="unitsDonated"
-              onChange={handleChange}
-              value={form.unitsDonated}
-            >
-              <option value="0.5">0.5 units</option>
-              <option value="1">1 unit</option>
-              <option value="1.5">1.5 units</option>
-              <option value="2">2 units</option>
-            </select>
-          </label>
-          <label className="donation-form-wide">
-            Hospital or blood bank
-            <input
-              name="hospitalName"
-              onChange={handleChange}
-              placeholder="Enter hospital name"
-              required
-              value={form.hospitalName}
-            />
-          </label>
-          <label>
-            Request ID (optional)
-            <input
-              name="requestId"
-              onChange={handleChange}
-              placeholder="Optional"
-              value={form.requestId}
-            />
-          </label>
-          <label>
-            Status
-            <select name="status" onChange={handleChange} value={form.status}>
-              <option value="completed">Completed</option>
-              <option value="verified">Verified</option>
-            </select>
-          </label>
-        </div>
-        {error && (
-          <p className="donation-form-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="donation-modal-actions">
-          <button
-            className="donation-cancel-button"
-            onClick={onClose}
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            className="donation-submit-button"
-            disabled={isSaving}
-            type="submit"
-          >
-            {isSaving ? "Submitting..." : "Submit donation"}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
@@ -854,16 +667,62 @@ function formatDonationDate(dateValue) {
     return "No record";
   }
 
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) {
+  const match = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) {
     return "No record";
   }
 
+  const [, year, month, day] = match;
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(date);
+  }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+}
+
+function EligibilityCountdown({ dateValue, now }) {
+  const targetDate = parseDateOnly(dateValue);
+  if (!targetDate) return "Eligibility countdown unavailable";
+
+  const remainingSeconds = Math.max(
+    0,
+    Math.ceil((targetDate.getTime() - now) / 1000),
+  );
+  if (remainingSeconds === 0) return "Eligible now";
+
+  const days = Math.floor(remainingSeconds / 86400);
+  const hours = Math.floor((remainingSeconds % 86400) / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+
+  return (
+    <span className="countdown-calendar">
+      <span className="countdown-calendar-title">Available in</span>
+      <span className="countdown-calendar-units">
+        <CountdownUnit value={days} label="Days" />
+        <CountdownUnit value={hours} label="Hours" />
+        <CountdownUnit value={minutes} label="Min" />
+        <CountdownUnit value={seconds} label="Sec" />
+      </span>
+    </span>
+  );
+}
+
+function CountdownUnit({ value, label }) {
+  return (
+    <span className={`countdown-calendar-unit ${label === "Sec" ? "countdown-calendar-seconds" : ""}`}>
+      <span className="countdown-calendar-number">{String(value).padStart(2, "0")}</span>
+      <span className="countdown-calendar-label">{label}</span>
+    </span>
+  );
+}
+
+function parseDateOnly(dateValue) {
+  const match = String(dateValue || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day));
 }
 
 function formatActivityDate(dateValue) {
@@ -929,9 +788,9 @@ function Activity({ icon, title, description, date }) {
   );
 }
 
-function HeartIcon() {
+function HeartIcon({ className = "" }) {
   return (
-    <svg className="dashboard-icon" fill="currentColor" viewBox="0 0 24 24">
+    <svg className={`dashboard-icon ${className}`.trim()} fill="currentColor" viewBox="0 0 24 24">
       <path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A6.017 6.017 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.5L12 21.35Z" />
     </svg>
   );
