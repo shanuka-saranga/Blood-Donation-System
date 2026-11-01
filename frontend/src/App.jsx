@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import axios from "axios";
-import Login from "./pages/Login";
+import Login from "./pages/login";
 import AppContent from "./components/AppContent";
 
 function App() {
@@ -44,7 +43,13 @@ function App() {
             user ? (
               <Navigate
                 replace
-                to={user.role === "admin" ? "/admin" : "/dashboard"}
+                to={
+                  user.role === "admin"
+                    ? "/admin"
+                    : user.role === "medical_staff"
+                      ? "/medical"
+                      : "/dashboard"
+                }
               />
             ) : (
               <Login
