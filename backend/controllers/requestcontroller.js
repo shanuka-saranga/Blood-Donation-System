@@ -29,6 +29,10 @@ exports.createRequest = async (req, res) => {
   }
 
   try {
+    const [[inventory]] = await db.query(
+      "SELECT available_units FROM blood_inventory WHERE blood_group = ?",
+      [bloodGroup],
+    );
     const [result] = await db.query(
       `INSERT INTO blood_requests
         (requester_id, patient_name, blood_group, units_required, hospital_name,
@@ -47,9 +51,20 @@ exports.createRequest = async (req, res) => {
       ],
     );
 
+    await db.query(
+      `INSERT INTO notifications (recipient_id, title, message)
+       SELECT id, 'New blood request', ?
+       FROM users WHERE role = 'admin'`,
+      [
+        `${bloodGroup} request for ${units} unit(s) was submitted by ${hospitalName.trim()}.`,
+      ],
+    );
+
     return res.status(201).json({
       message: "Blood request submitted successfully.",
       requestId: result.insertId,
+      inventoryAvailable: Number(inventory?.available_units || 0) >= units,
+      availableUnits: Number(inventory?.available_units || 0),
     });
   } catch (error) {
     return res
@@ -67,7 +82,7 @@ exports.getMyRequests = async (req, res) => {
       `SELECT id, patient_name, blood_group, units_required, hospital_name, city,
               contact_number, urgency_level,
               COALESCE(NULLIF(urgency_level, ''), urgency, 'standard') AS urgency,
-              status, required_date, created_at
+              status, required_date, created_at, updated_at, dispatched_at
        FROM blood_requests
        WHERE requester_id = ?
        ORDER BY created_at DESC, id DESC`,
@@ -258,25 +273,87 @@ exports.acceptRequest = async (req, res) => {
 };
 
 exports.reviewRequest = async (req, res) => {
-  const status = req.params.action === "approve" ? "approved" : "declined";
+  const isApproval = req.params.action === "approve";
+  if (!isApproval && req.params.action !== "decline") {
+    return res.status(400).json({ message: "Invalid blood request action." });
+  }
+  let connection;
   try {
-    const [result] = await db.query(
-      "UPDATE blood_requests SET status = ? WHERE id = ? AND LOWER(status) IN ('pending', 'open', 'active')",
-      [status, req.params.requestId],
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [[request]] = await connection.query(
+      `SELECT id, requester_id, blood_group, units_required, hospital_name
+       FROM blood_requests
+       WHERE id = ? AND LOWER(status) IN ('pending', 'open', 'active')
+       FOR UPDATE`,
+      [req.params.requestId],
     );
-    if (result.affectedRows === 0)
-      return res
-        .status(404)
-        .json({ message: "Active blood request not found." });
-    return res
-      .status(200)
-      .json({ message: `Blood request ${status} successfully.` });
+    if (!request) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Active blood request not found." });
+    }
+
+    if (!isApproval) {
+      await connection.query(
+        "UPDATE blood_requests SET status = 'declined' WHERE id = ?",
+        [request.id],
+      );
+      await connection.query(
+        `INSERT INTO notifications (recipient_id, title, message)
+         VALUES (?, 'Blood request declined', ?)`,
+        [
+          request.requester_id,
+          `Your blood request for ${request.blood_group} at ${request.hospital_name} was declined by an administrator.`,
+        ],
+      );
+      await connection.commit();
+      return res.status(200).json({ message: "Blood request declined successfully." });
+    }
+
+    const [[inventory]] = await connection.query(
+      "SELECT available_units FROM blood_inventory WHERE blood_group = ? FOR UPDATE",
+      [request.blood_group],
+    );
+    const availableUnits = Number(inventory?.available_units || 0);
+    if (!inventory || availableUnits < Number(request.units_required)) {
+      await connection.rollback();
+      return res.status(409).json({
+        message: `Insufficient ${request.blood_group} stock. Available: ${availableUnits} bag(s); required: ${request.units_required}.`,
+      });
+    }
+
+    await connection.query(
+      "UPDATE blood_inventory SET available_units = available_units - ? WHERE blood_group = ?",
+      [request.units_required, request.blood_group],
+    );
+    await connection.query(
+      `UPDATE blood_requests
+       SET status = 'dispatched', approved_by = ?, dispatched_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [req.user.id, request.id],
+    );
+    await connection.query(
+      `INSERT INTO notifications (recipient_id, title, message)
+       VALUES (?, 'Blood request dispatched', ?)`,
+      [
+        request.requester_id,
+        `Your ${request.blood_group} blood request has been approved and dispatched. ${request.units_required} bag(s) were released from inventory.`,
+      ],
+    );
+    await connection.commit();
+    return res.status(200).json({
+      message: "Blood request approved and dispatched successfully.",
+      deductedUnits: Number(request.units_required),
+    });
   } catch (error) {
+    if (connection) await connection.rollback();
     return res
       .status(500)
       .json({
         message: "Unable to review blood request.",
         error: error.message,
       });
+  } finally {
+    connection?.release();
   }
 };
