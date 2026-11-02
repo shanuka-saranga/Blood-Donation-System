@@ -17,6 +17,7 @@
 .admin-add-button:hover { background: #991b1b; }
 .admin-stats { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; margin-bottom: 22px; }
 .admin-stat, .admin-panel { border: 1px solid #fee2e2; border-radius: 16px; background: #fff; box-shadow: 0 10px 25px rgba(127,29,29,.06); }
+.admin-detail-panel { scroll-margin-top: 24px; }
 .admin-stat { display: grid; min-width: 0; gap: 5px; padding: 13px 12px; border: 1px solid #fee2e2; text-align: left; cursor: pointer; }
 .admin-stat:hover, .admin-stat-active { border-color: #f87171; background: #fff1f2; }
 .admin-stat strong { color: #991b1b; font-size: 24px; }

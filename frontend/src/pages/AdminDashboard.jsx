@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import "./AdminDashboard.css";
 
@@ -11,6 +11,17 @@ function AdminDashboard({ user, onLogout }) {
   const [editingUser, setEditingUser] = useState(null);
   const [actionError, setActionError] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
+  const detailsSectionRef = useRef(null);
+
+  const handleStatClick = (card) => {
+    setSelectedCard(card);
+    window.requestAnimationFrame(() => {
+      detailsSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   const adminRequest = (method, url, data) =>
     axios({
@@ -139,43 +150,43 @@ function AdminDashboard({ user, onLogout }) {
           <AdminStat
             active={selectedCard === "users"}
             label="Total registered users"
-            onClick={() => setSelectedCard("users")}
+            onClick={() => handleStatClick("users")}
             value={stats.users || 0}
           />
           <AdminStat
             active={selectedCard === "donors"}
             label="Total registered donors"
-            onClick={() => setSelectedCard("donors")}
+            onClick={() => handleStatClick("donors")}
             value={stats.donors || 0}
           />
           <AdminStat
             active={selectedCard === "eligible"}
             label="Eligible donors"
-            onClick={() => setSelectedCard("eligible")}
+            onClick={() => handleStatClick("eligible")}
             value={stats.eligibleDonors || 0}
           />
           <AdminStat
             active={selectedCard === "donations"}
             label="Total donations"
-            onClick={() => setSelectedCard("donations")}
+            onClick={() => handleStatClick("donations")}
             value={stats.donations || 0}
           />
           <AdminStat
             active={selectedCard === "requests"}
             label="Active blood requests"
-            onClick={() => setSelectedCard("requests")}
+            onClick={() => handleStatClick("requests")}
             value={stats.activeRequests || 0}
           />
           <AdminStat
             active={selectedCard === "camps"}
             label="Upcoming donation camps"
-            onClick={() => setSelectedCard("camps")}
+            onClick={() => handleStatClick("camps")}
             value={stats.upcomingCamps || 0}
           />
           <AdminStat
             active={selectedCard === "appointments"}
             label="Camp appointments"
-            onClick={() => setSelectedCard("appointments")}
+            onClick={() => handleStatClick("appointments")}
             value={stats.appointments || 0}
           />
         </section>
@@ -186,6 +197,7 @@ function AdminDashboard({ user, onLogout }) {
         />
 
         <AdminDetails
+          detailsSectionRef={detailsSectionRef}
           onAppointmentReview={handleAppointmentReview}
           onCampReview={handleCampReview}
           onDeleteUser={handleDeleteUser}
@@ -656,6 +668,7 @@ function UserForm({ onClose, onSaved, user }) {
 }
 
 function AdminDetails({
+  detailsSectionRef,
   onAppointmentReview,
   onCampReview,
   onAddCamp,
@@ -694,7 +707,10 @@ function AdminDetails({
     ? selectedItems.filter((item) => item.role === userRoleFilter)
     : selectedItems;
   return (
-    <section className="admin-panel admin-detail-panel">
+    <section
+      className="admin-panel admin-detail-panel"
+      ref={detailsSectionRef}
+    >
       <div className="admin-panel-heading">
         <div>
           <p className="admin-eyebrow">Selected summary</p>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import "./BloodRequest.css";
 import PageTopbar from "../components/PageTopbar";
+import DonorFooter from "../components/DonorFooter";
 
 const API_BASE_URL = "/api/requests";
 
@@ -507,6 +508,7 @@ function BloodRequest({
             </div>
           )}
         </section>
+        <DonorFooter />
       </section>
     </main>
   );

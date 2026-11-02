@@ -21,7 +21,7 @@ function PageTopbar({ user, onOpenProfile }) {
 
   useEffect(() => {
     loadNotifications();
-    const timerId = window.setInterval(loadNotifications, 30000);
+    const timerId = window.setInterval(loadNotifications, 5000);
     return () => window.clearInterval(timerId);
   }, []);
 
