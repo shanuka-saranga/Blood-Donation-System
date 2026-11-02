@@ -3,8 +3,17 @@ import axios from "axios";
 import "./Profile.css";
 import "./DonorDetailsModal.css";
 import PageTopbar from "../components/PageTopbar";
+import DonorFooter from "../components/DonorFooter";
 
 const API_URL = "/api/auth";
+
+const formatDateInput = (value) => {
+  if (!value) return "";
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+};
 
 function Profile({
   user,
@@ -33,11 +42,12 @@ function Profile({
     phone: user.donorDetails?.phone || user.phone || "",
     nic: user.donorDetails?.nic || "",
     age: user.donorDetails?.age || "",
-    dateOfBirth: user.donorDetails?.dateOfBirth || "",
+    weight: user.donorDetails?.weight || "",
+    dateOfBirth: formatDateInput(user.donorDetails?.dateOfBirth),
     healthQuestionnaire: user.donorDetails?.healthQuestionnaire || "",
     gender: user.donorDetails?.gender || "",
     city: user.donorDetails?.city || user.location || "",
-    lastDonatedDate: user.donorDetails?.lastDonatedDate || "",
+    lastDonatedDate: formatDateInput(user.donorDetails?.lastDonatedDate),
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -46,6 +56,7 @@ function Profile({
     () => localStorage.getItem("notifications") !== "false",
   );
   const [message, setMessage] = useState("");
+  const [eligibilityErrors, setEligibilityErrors] = useState({});
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -67,6 +78,9 @@ function Profile({
   const handleDonorDetailChange = (event) => {
     const { name, value } = event.target;
     setDonorDetails((current) => ({ ...current, [name]: value }));
+    if (name === "age" || name === "weight") {
+      setEligibilityErrors((current) => ({ ...current, [name]: "" }));
+    }
     setIsDirty(true);
     setMessage("");
   };
@@ -100,10 +114,33 @@ function Profile({
 
   const handleSave = async (event) => {
     event.preventDefault();
+    const age = Number(donorDetails.age);
+    const weight = Number(donorDetails.weight);
+    const errors = {};
+    if (!Number.isInteger(age) || age < 18) {
+      errors.age = "Age must be at least 18 years.";
+    }
+    if (age > 60) {
+      errors.age = "Age must not be more than 60 years.";
+    }
+    if (!Number.isFinite(weight) || weight < 50) {
+      errors.weight = "Weight must be at least 50 kg.";
+    }
+    if (Object.keys(errors).length) {
+      setEligibilityErrors(errors);
+      setMessage("Please correct the eligibility requirements.");
+      return;
+    }
+    setEligibilityErrors({});
     setIsSaving(true);
     setMessage("");
 
     try {
+      const donorPayload = {
+        ...donorDetails,
+        age: Number(donorDetails.age),
+        weight: Number(donorDetails.weight),
+      };
       const response = await axios.put(
         `${API_URL}/profile`,
         { ...form, profilePicture },
@@ -115,7 +152,7 @@ function Profile({
       if (user.role === "donor") {
         const donorResponse = await axios.put(
           `${API_URL}/donor-details`,
-          donorDetails,
+          donorPayload,
           {
             headers: {
               Authorization: "Bearer " + localStorage.getItem("token"),
@@ -368,13 +405,28 @@ function Profile({
                 <input
                   className="profile-input"
                   min="18"
-                  max="100"
+                  max="60"
                   name="age"
                   onChange={handleDonorDetailChange}
                   required
                   type="number"
                   value={donorDetails.age}
                 />
+                {eligibilityErrors.age && <span className="profile-field-error">{eligibilityErrors.age}</span>}
+              </label>
+              <label>
+                Weight (kg)
+                <input
+                  className="profile-input"
+                  min="50"
+                  name="weight"
+                  onChange={handleDonorDetailChange}
+                  required
+                  step="0.1"
+                  type="number"
+                  value={donorDetails.weight}
+                />
+                {eligibilityErrors.weight && <span className="profile-field-error">{eligibilityErrors.weight}</span>}
               </label>
               <label>
                 Date of birth
@@ -544,6 +596,7 @@ function Profile({
             </button>
           </form>
         </div>
+        <DonorFooter />
       </section>
       {showSuccess && (
         <div className="donor-details-overlay">
