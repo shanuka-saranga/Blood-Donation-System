@@ -142,6 +142,11 @@ const ensureDonorScreeningFields = async () => {
       "ALTER TABLE donor_details ADD COLUMN health_questionnaire TEXT NULL AFTER date_of_birth",
     );
   }
+  if (!columns.some((column) => column.Field === "weight")) {
+    await db.query(
+      "ALTER TABLE donor_details ADD COLUMN weight DECIMAL(5,2) NULL AFTER age",
+    );
+  }
   if (!columns.some((column) => column.Field === "next_eligible_date")) {
     await db.query(
       "ALTER TABLE donor_details ADD COLUMN next_eligible_date DATE NULL AFTER last_donated_date",
