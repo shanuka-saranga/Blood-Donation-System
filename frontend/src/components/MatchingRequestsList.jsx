@@ -8,6 +8,7 @@ function MatchingRequestsList({ onActivityChanged }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [acceptingRequestId, setAcceptingRequestId] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
 
   useEffect(() => {
     const fetchMatchingRequests = async () => {
@@ -35,7 +36,7 @@ function MatchingRequestsList({ onActivityChanged }) {
     setError("");
 
     try {
-      await axios.post(
+      const response = await axios.post(
         `${API_BASE_URL}/${requestId}/accept`,
         {},
         {
@@ -45,6 +46,7 @@ function MatchingRequestsList({ onActivityChanged }) {
       setRequests((currentRequests) =>
         currentRequests.filter((request) => request.id !== requestId),
       );
+      setConfirmation(response.data.confirmation || null);
       onActivityChanged?.();
     } catch (requestError) {
       setError(
@@ -77,6 +79,23 @@ function MatchingRequestsList({ onActivityChanged }) {
 
   return (
     <section className="matching-requests-panel dashboard-panel">
+      {confirmation && (
+        <section className="donor-confirmation-card" aria-live="polite">
+          <div className="donor-confirmation-heading">
+            <div>
+              <p className="panel-eyebrow">Donation confirmed</p>
+              <h2>Thank you for helping {confirmation.patientName}</h2>
+            </div>
+            <span className="donor-confirmation-check" aria-hidden="true">✓</span>
+          </div>
+          <div className="donor-confirmation-details">
+            <span><strong>Hospital</strong>{confirmation.hospitalName}, {confirmation.city}</span>
+            <span><strong>Contact person</strong>{confirmation.contactPerson}</span>
+            <span><strong>Contact number</strong>{confirmation.contactNumber}</span>
+            <span><strong>Donation date</strong>{formatConfirmationDate(confirmation.requiredDate)}</span>
+          </div>
+        </section>
+      )}
       <div className="panel-heading">
         <div>
           <p className="panel-eyebrow">Help nearby</p>
@@ -140,6 +159,17 @@ function MatchingRequestsList({ onActivityChanged }) {
       )}
     </section>
   );
+}
+
+function formatConfirmationDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : new Intl.DateTimeFormat("en", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date);
 }
 
 export default MatchingRequestsList;
