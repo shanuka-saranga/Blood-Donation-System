@@ -250,6 +250,7 @@ CREATE TABLE `donor_details` (
   `phone` varchar(30) NOT NULL,
   `nic` varchar(20) NOT NULL,
   `age` tinyint(3) UNSIGNED NOT NULL,
+  `weight` decimal(5,2) DEFAULT NULL,
   `date_of_birth` date DEFAULT NULL,
   `health_questionnaire` text DEFAULT NULL,
   `gender` varchar(20) NOT NULL,
