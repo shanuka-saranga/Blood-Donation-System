@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./DonationCamps.css";
 import PageTopbar from "../components/PageTopbar";
+import DonorFooter from "../components/DonorFooter";
 
 function DonationCamps({
   user,
@@ -238,6 +239,7 @@ function DonationCamps({
             </div>
           </section>
         </div>
+        <DonorFooter />
       </section>
     </main>
   );

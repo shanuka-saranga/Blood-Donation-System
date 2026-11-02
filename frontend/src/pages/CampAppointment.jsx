@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./CampAppointment.css";
+import DonorFooter from "../components/DonorFooter";
 
 function CampAppointment({ user }) {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ function CampAppointment({ user }) {
           <p>Choose a donation camp first to book an appointment.</p>
           <button onClick={() => navigate("/camps")} type="button">View donation camps</button>
         </section>
+        <DonorFooter />
       </main>
     );
   }
@@ -98,6 +100,7 @@ function CampAppointment({ user }) {
           )}
         </form>
       </section>
+      <DonorFooter />
     </main>
   );
 }

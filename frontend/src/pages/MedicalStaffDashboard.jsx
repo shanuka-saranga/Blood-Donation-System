@@ -65,7 +65,11 @@ function MedicalStaffDashboard({ user, onLogout }) {
 
   const selectDonor = (donor) => {
     setSelectedDonor(donor);
-    setForm((current) => ({ ...current, donorId: String(donor.id) }));
+    setForm((current) => ({
+      ...current,
+      donorId: String(donor.id),
+      weight: donor.donor_weight ?? "",
+    }));
   };
 
   const clearDonorSelection = () => {
@@ -177,7 +181,7 @@ function MedicalStaffDashboard({ user, onLogout }) {
                   type="button"
                 >
                   <strong>{donor.name}</strong>
-                  <span>ID: {donor.id} · NIC: {donor.nic || "Not provided"} · DOB: {donor.date_of_birth || "Not provided"}</span>
+                  <span>Donor ID: {donor.id}</span>
                 </button>
               ))}
               {!filteredDonors.length && <p>No matching donor found.</p>}
@@ -186,10 +190,11 @@ function MedicalStaffDashboard({ user, onLogout }) {
           {selectedDonor && (
             <div className="medical-questionnaire">
               <h3>Selected donor details</h3>
-              <p><strong>{selectedDonor.name}</strong> · {selectedDonor.email}</p>
+              <p><strong>{selectedDonor.name}</strong></p>
               <p>
-                ID: {selectedDonor.id} · NIC: {selectedDonor.nic || "Not provided"} ·
-                DOB: {selectedDonor.date_of_birth || "Not provided"} · Age: {selectedDonor.age || "Not provided"}
+                Blood group: {selectedDonor.blood_group || "Not provided"} ·
+                Age: {selectedDonor.age || "Not provided"} ·
+                Weight: {selectedDonor.donor_weight ?? "Not provided"} kg
               </p>
               <p>Last donation: {selectedDonor.last_donation_date || "No previous donation recorded"}</p>
               <h4>Digital pre-screening questionnaire</h4>
@@ -204,9 +209,19 @@ function MedicalStaffDashboard({ user, onLogout }) {
           <div className="medical-fields">
             <label>Donor<input readOnly value={`${selectedDonor.name} (ID ${selectedDonor.id})`} /></label>
             <label>Submission date<input name="assessmentDate" readOnly type="date" value={form.assessmentDate} /></label>
+            <label>Blood group<input readOnly value={selectedDonor.blood_group || "Not provided"} /></label>
+            <label>Age<input readOnly value={selectedDonor.age || "Not provided"} /></label>
+            <label>Weight (kg)<input readOnly value={selectedDonor.donor_weight ?? "Not provided"} /></label>
+            <label>Date of birth<input readOnly value={selectedDonor.date_of_birth || "Not provided"} /></label>
+            <label className="medical-wide">
+              Donor health questionnaire
+              <textarea
+                readOnly
+                value={selectedDonor.health_questionnaire || "Not provided"}
+              />
+            </label>
             <label className="medical-wide">Digital pre-screening assessment<textarea name="preScreening" onChange={handleChange} placeholder="Record health questions, recent illness, medication, and risk assessment" required value={form.preScreening} /></label>
             <label>Hemoglobin (g/dL)<input min="0" name="hemoglobin" onChange={handleChange} step="0.1" type="number" value={form.hemoglobin} /></label>
-            <label>Weight (kg)<input min="0" name="weight" onChange={handleChange} step="0.1" type="number" value={form.weight} /></label>
             <label>Blood bag barcode<input name="bloodBagBarcode" onChange={handleChange} placeholder="Scan or enter barcode" value={form.bloodBagBarcode} /></label>
             <label>Eligibility flag<select name="eligibility" onChange={handleChange} value={form.eligibility}>
               <option value="eligible">Eligible</option><option value="ineligible">Ineligible</option><option value="review">Needs review</option>

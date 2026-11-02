@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./DonationHistory.css";
 import PageTopbar from "../components/PageTopbar";
+import DonorFooter from "../components/DonorFooter";
 
 function DonationHistory({
   user,
@@ -191,6 +192,7 @@ function DonationHistory({
             )}
           </div>
         )}
+        <DonorFooter />
       </section>
     </main>
   );
