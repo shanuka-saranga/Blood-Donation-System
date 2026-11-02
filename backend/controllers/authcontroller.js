@@ -2,6 +2,14 @@ const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const normalizeDateInput = (value) => {
+  if (!value) return "";
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+};
+
 // 1. User Registration
 exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
@@ -49,6 +57,7 @@ exports.login = async (req, res) => {
       `SELECT users.*, donor_details.blood_group AS donor_blood_group,
               donor_details.phone AS donor_phone, donor_details.nic,
               donor_details.age, donor_details.date_of_birth,
+              donor_details.weight,
               donor_details.health_questionnaire, donor_details.gender, donor_details.city,
               donor_details.last_donated_date, donor_details.is_eligible,
               donor_details.id AS donor_details_id
@@ -95,15 +104,20 @@ exports.login = async (req, res) => {
           phone: user.donor_phone,
           nic: user.nic,
           age: user.age,
-          dateOfBirth: user.date_of_birth || "",
+          weight: user.weight,
+          dateOfBirth: normalizeDateInput(user.date_of_birth),
           healthQuestionnaire: user.health_questionnaire || "",
           gender: user.gender,
           city: user.city,
-          lastDonatedDate: user.last_donated_date || "",
+          lastDonatedDate: normalizeDateInput(user.last_donated_date),
           isEligible: Boolean(user.is_eligible),
         } : null,
         donorDetailsComplete: Boolean(
-          user.donor_details_id && user.health_questionnaire?.trim(),
+          user.donor_details_id &&
+            user.health_questionnaire?.trim() &&
+            Number(user.age) >= 18 &&
+            Number(user.age) <= 60 &&
+            Number(user.weight) >= 50,
         ),
       },
     });
@@ -114,48 +128,86 @@ exports.login = async (req, res) => {
 
 exports.updateDonorDetails = async (req, res) => {
   const {
-    bloodGroup, phone, nic, age, dateOfBirth, healthQuestionnaire, gender, city, lastDonatedDate,
+    bloodGroup, phone, nic, age, weight, dateOfBirth, healthQuestionnaire, gender, city, lastDonatedDate,
   } = req.body;
   const numericAge = Number(age);
+  const numericWeight = Number(weight);
+  const normalizedDateOfBirth = normalizeDateInput(dateOfBirth);
+  const normalizedLastDonatedDate = normalizeDateInput(lastDonatedDate);
 
   if (!bloodGroup || !phone?.trim() || !nic?.trim() || !gender || !city?.trim()
-    || !dateOfBirth || !healthQuestionnaire?.trim()
-    || !Number.isInteger(numericAge) || numericAge < 18 || numericAge > 100) {
-    return res.status(400).json({ message: "Health questionnaire, date of birth, and valid donor details are required." });
+    || !normalizedDateOfBirth || !healthQuestionnaire?.trim()
+    || !Number.isInteger(numericAge) || numericAge < 18 || numericAge > 60) {
+    return res.status(400).json({
+      message: !Number.isInteger(numericAge) || numericAge < 18
+        ? "Age must be at least 18 years."
+        : numericAge > 60
+          ? "Age must not be more than 60 years."
+          : "Health questionnaire, date of birth, and valid donor details are required.",
+    });
+  }
+  if (!Number.isFinite(numericWeight) || numericWeight < 50) {
+    return res.status(400).json({
+      message: !Number.isFinite(numericWeight)
+        ? "Weight is required."
+        : "Weight must be at least 50 kg.",
+    });
   }
 
   try {
-    await db.query(
-      `INSERT INTO donor_details
-        (user_id, blood_group, phone, nic, age, date_of_birth, health_questionnaire,
-         gender, city, last_donated_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-        blood_group = VALUES(blood_group), phone = VALUES(phone), nic = VALUES(nic),
-        age = VALUES(age), date_of_birth = VALUES(date_of_birth),
-        health_questionnaire = VALUES(health_questionnaire),
-        gender = VALUES(gender), city = VALUES(city),
-        last_donated_date = VALUES(last_donated_date)`,
-      [
-        req.user.id,
+    const [[existingDonor]] = await db.query(
+      "SELECT id FROM donor_details WHERE user_id = ?",
+      [req.user.id],
+    );
+    if (existingDonor) {
+      await db.query(
+      `UPDATE donor_details
+       SET blood_group = ?, phone = ?, nic = ?, age = ?, weight = ?,
+           date_of_birth = ?, health_questionnaire = ?, gender = ?, city = ?,
+           last_donated_date = ?
+       WHERE user_id = ?`,
+       [
         bloodGroup,
         phone.trim(),
         nic.trim(),
         numericAge,
-        dateOfBirth || null,
+        numericWeight,
+        normalizedDateOfBirth,
         healthQuestionnaire?.trim() || null,
         gender,
         city.trim(),
-        lastDonatedDate || null,
-      ],
-    );
+        normalizedLastDonatedDate || null,
+        req.user.id,
+       ],
+      );
+    } else {
+      await db.query(
+        `INSERT INTO donor_details
+          (user_id, blood_group, phone, nic, age, weight, date_of_birth,
+           health_questionnaire, gender, city, last_donated_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.id,
+          bloodGroup,
+          phone.trim(),
+          nic.trim(),
+          numericAge,
+          numericWeight,
+          normalizedDateOfBirth,
+          healthQuestionnaire?.trim() || null,
+          gender,
+          city.trim(),
+          normalizedLastDonatedDate || null,
+        ],
+      );
+    }
 
     return res.status(200).json({
       message: "Donor details updated successfully.",
       donorDetails: {
-        bloodGroup, phone: phone.trim(), nic: nic.trim(), age: numericAge,
-        dateOfBirth: dateOfBirth || "", healthQuestionnaire: healthQuestionnaire?.trim() || "",
-        gender, city: city.trim(), lastDonatedDate: lastDonatedDate || "",
+        bloodGroup, phone: phone.trim(), nic: nic.trim(), age: numericAge, weight: numericWeight,
+        dateOfBirth: normalizedDateOfBirth, healthQuestionnaire: healthQuestionnaire?.trim() || "",
+        gender, city: city.trim(), lastDonatedDate: normalizedLastDonatedDate,
         isEligible: true,
       },
       donorDetailsComplete: true,
@@ -167,6 +219,33 @@ exports.updateDonorDetails = async (req, res) => {
 
 exports.checkEligibility = async (req, res) => {
   try {
+    const [[screening]] = await db.query(
+      `SELECT age, weight FROM donor_details WHERE user_id = ?`,
+      [req.user.id],
+    );
+    const age = Number(screening?.age);
+    const weight = Number(screening?.weight);
+    if (!Number.isInteger(age) || age < 18 || age > 60) {
+      await db.query(
+        "UPDATE donor_details SET is_eligible = FALSE WHERE user_id = ?",
+        [req.user.id],
+      );
+      return res.status(200).json({
+        isEligible: false,
+        message: age > 60 ? "You must be 60 years old or younger to donate." : "You must be at least 18 years old to donate.",
+      });
+    }
+    if (!Number.isFinite(weight) || weight < 50) {
+      await db.query(
+        "UPDATE donor_details SET is_eligible = FALSE WHERE user_id = ?",
+        [req.user.id],
+      );
+      return res.status(200).json({
+        isEligible: false,
+        message: "Your weight must be at least 50 kg to donate.",
+      });
+    }
+
     const [rows] = await db.query(
       `SELECT MAX(donated_date) AS last_donated_date
        FROM donation_records
@@ -1134,7 +1213,8 @@ exports.getMedicalSummary = async (req, res) => {
       `SELECT users.id, users.name, users.email, donor_details.blood_group, donor_details.city,
               donor_details.nic, donor_details.age, donor_details.date_of_birth,
               donor_details.health_questionnaire, donor_details.phone,
-              donor_details.gender, donor_details.is_eligible,
+              donor_details.gender, donor_details.weight AS donor_weight,
+              donor_details.is_eligible,
               donor_details.next_eligible_date,
               COALESCE(
                 donor_details.last_donated_date,
@@ -1256,12 +1336,29 @@ exports.createMedicalAssessment = async (req, res) => {
   try {
     await connection.beginTransaction();
     const [donor] = await connection.query(
-      "SELECT id FROM users WHERE id = ? AND role = 'donor'",
+      `SELECT users.id, donor_details.age, donor_details.weight
+       FROM users
+       LEFT JOIN donor_details ON donor_details.user_id = users.id
+       WHERE users.id = ? AND users.role = 'donor'`,
       [donorId],
     );
     if (!donor.length) {
       await connection.rollback();
       return res.status(404).json({ message: "Donor not found." });
+    }
+    const donorAge = Number(donor[0].age);
+    const donorWeight = Number(donor[0].weight);
+    if (eligibility === "eligible" && (!Number.isInteger(donorAge) || donorAge < 18 || donorAge > 60)) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: donorAge > 60
+          ? "This donor is over the maximum eligible age of 60."
+          : "This donor must be at least 18 years old.",
+      });
+    }
+    if (eligibility === "eligible" && (!Number.isFinite(donorWeight) || donorWeight < 50)) {
+      await connection.rollback();
+      return res.status(400).json({ message: "This donor's weight must be at least 50 kg." });
     }
     const [result] = await connection.query(
       `INSERT INTO medical_assessments
@@ -1270,7 +1367,8 @@ exports.createMedicalAssessment = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         donorId, req.user.id, donationDate, preScreening.trim(),
-        hemoglobin === "" ? null : hemoglobin, weight === "" ? null : weight,
+        hemoglobin === "" ? null : hemoglobin,
+        Number.isFinite(donorWeight) ? donorWeight : null,
         bloodBagBarcode?.trim() || null, eligibility, notes?.trim() || null,
       ],
     );

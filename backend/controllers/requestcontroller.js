@@ -250,25 +250,86 @@ exports.getMatchingRequests = async (req, res) => {
 };
 
 exports.acceptRequest = async (req, res) => {
+  let connection;
   try {
-    const [result] = await db.query(
-      `UPDATE blood_requests
-       SET status = 'accepted', accepted_by = ?, accepted_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND status = 'pending' AND (requester_id IS NULL OR requester_id <> ?)`,
-      [req.user.id, req.params.requestId, req.user.id],
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [[request]] = await connection.query(
+      `SELECT requests.id, requests.requester_id, requests.patient_name,
+              requests.blood_group, requests.units_required, requests.hospital_name,
+              requests.city, requests.contact_number, requests.required_date,
+              requester.name AS requester_name
+       FROM blood_requests AS requests
+       INNER JOIN users AS requester ON requester.id = requests.requester_id
+       WHERE requests.id = ?
+         AND LOWER(TRIM(requests.status)) = 'pending'
+         AND requests.requester_id <> ?
+       FOR UPDATE`,
+      [req.params.requestId, req.user.id],
     );
 
-    if (result.affectedRows === 0) {
+    if (!request) {
+      await connection.rollback();
       return res
         .status(404)
         .json({ message: "This request is no longer available." });
     }
 
-    return res.status(200).json({ message: "Request accepted successfully." });
+    const [[donor]] = await connection.query(
+      `SELECT users.name, users.email, COALESCE(NULLIF(donor_details.phone, ''), users.phone) AS phone
+       FROM users
+       LEFT JOIN donor_details ON donor_details.user_id = users.id
+       WHERE users.id = ?`,
+      [req.user.id],
+    );
+
+    await connection.query(
+      `UPDATE blood_requests
+       SET status = 'accepted', accepted_by = ?, accepted_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [req.user.id, request.id],
+    );
+
+    await connection.query(
+      `INSERT INTO notifications (recipient_id, title, message)
+       VALUES (?, 'Donor accepted your blood request', ?)`,
+      [
+        request.requester_id,
+        `ඔබගේ ලේ ඉල්ලීම සඳහා ${donor.name} දායක වීමට එකඟ විය. Donor contact: ${donor.phone || donor.email || "Not available"}.`,
+      ],
+    );
+
+    await connection.query(
+      `INSERT INTO notifications (recipient_id, title, message)
+       VALUES (?, 'Blood donation confirmation', ?)`,
+      [
+        req.user.id,
+        `You agreed to donate for ${request.patient_name}. Hospital: ${request.hospital_name}, ${request.city}. Contact person: ${request.requester_name}. Contact: ${request.contact_number}. Required date: ${request.required_date}.`,
+      ],
+    );
+
+    await connection.commit();
+    return res.status(200).json({
+      message: "Request accepted successfully.",
+      confirmation: {
+        patientName: request.patient_name,
+        hospitalName: request.hospital_name,
+        city: request.city,
+        contactPerson: request.requester_name,
+        contactNumber: request.contact_number,
+        requiredDate: request.required_date,
+        bloodGroup: request.blood_group,
+        unitsRequired: request.units_required,
+      },
+    });
   } catch (error) {
+    if (connection) await connection.rollback();
     return res
       .status(500)
       .json({ message: "Unable to accept request.", error: error.message });
+  } finally {
+    connection?.release();
   }
 };
 
