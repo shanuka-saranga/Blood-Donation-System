@@ -3,6 +3,7 @@ import axios from "axios";
 import "./DonorDashboard.css";
 import PageTopbar from "../components/PageTopbar";
 import MatchingRequestsList from "../components/MatchingRequestsList";
+import DonorFooter from "../components/DonorFooter";
 
 function DonorDashboard({
   user,
@@ -559,6 +560,7 @@ function DonorDashboard({
             </div>
           )}
         </section>
+        <DonorFooter />
       </section>
       {selectedCamp && (
         <CampDetailsModal

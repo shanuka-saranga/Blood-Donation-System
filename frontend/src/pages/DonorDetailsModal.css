@@ -9,6 +9,12 @@
   background: rgba(15, 23, 42, .62);
 }
 
+.donor-details-field-error {
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .donor-details-modal {
   position: relative;
   width: min(100%, 620px);

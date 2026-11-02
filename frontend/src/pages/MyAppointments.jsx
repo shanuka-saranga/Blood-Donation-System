@@ -3,6 +3,7 @@ import axios from "axios";
 import QRCode from "qrcode";
 import "./MyAppointments.css";
 import PageTopbar from "../components/PageTopbar";
+import DonorFooter from "../components/DonorFooter";
 
 function MyAppointments({
   user,
@@ -194,6 +195,7 @@ function MyAppointments({
             )}
           </div>
         )}
+        <DonorFooter />
       </section>
     </main>
   );
